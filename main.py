@@ -1,0 +1,273 @@
+import zipfile
+import re
+import os
+import googlesearch
+import pickle
+from colorama import init, Fore
+from urllib import error
+from bs4 import BeautifulSoup as BS
+import cfscrape
+init()
+
+mods_dir = 'C:\\Users\\Tim PC\\AppData\\Roaming\\.minecraft\\mods'
+
+
+def unzip(file_path):
+    archive = zipfile.ZipFile(file_path, 'r')
+    try:
+        archive.extract('mcmod.info')
+    except KeyError:
+        return False
+    return True
+
+
+def get_mod_info(file_path):
+    if unzip(file_path):
+        with open('mcmod.info', 'rb') as file:
+            file_data = str(file.read())
+
+        mod_info = {
+            'name': re.findall(r'[\"][\w].+', re.findall(r'name.{4}[\w\s]+', file_data)[0])[0][1::],
+        }
+
+        try:
+            mod_info['version'] = re.findall(r'[\w.-]+',
+                                             re.findall(r'\"version.{4}[\w.-]+', file_data)[0][::-1])[0][::-1]
+        except IndexError:
+            print(Fore.RED + mod_info['name'] + ' - no "Version" found' + Fore.RESET)
+            return False
+
+        try:
+            mod_info['mc_version'] = re.findall(r'[\"][\w].+',
+                                                re.findall(r'mcversion.{4}[\w.-]+', file_data)[0])[0][1::]
+        except IndexError:
+            pass
+
+        os.remove('mcmod.info')
+
+        return mod_info
+    else:
+        print(Fore.RED + 'No "mcmod.info" found: ' + Fore.RESET)
+        print(Fore.RED + file_path)
+    return False
+
+
+def update_mod_info(mod_info):
+    with open('mods.list', 'rb') as file:
+        mods_list = pickle.load(file)
+
+    try:
+        for mod in mods_list:
+            if mod['name'] == mod_info['name'] and mod['version'] == mod_info['version']:
+
+                print(Fore.CYAN + mod_info['name'] + ' (' + mod_info['version'] + ')' + ' is already up to date' +
+                      Fore.RESET)
+                mod['updated'] = True
+                with open('mods.list', 'wb') as file:
+                    pickle.dump(mods_list, file)
+                return True
+
+    except TypeError:
+        print('Update_mod_info() - TypeError happened!')
+        reset_file('mods.list')
+
+    try:
+        mods_list.append(mod_info)
+
+        for mod in mods_list:
+            if mod['name'] == mod_info['name']:
+                mod['updated'] = True
+                mod['url'] = False
+                with open('mods.list', 'wb') as file:
+                    pickle.dump(mods_list, file)
+
+        print(Fore.GREEN + mod_info['name'] + ' (' + mod_info['version'] + ')' + ' added to "mods.list"' +
+              Fore.RESET)
+        with open('mods.list', 'wb') as file:
+            pickle.dump(mods_list, file)
+    except AttributeError:
+        print('Update_mod_info() - AttributeError happened!')
+        reset_file('mods.list')
+
+
+def reset_file(file_name):
+    with open(file_name, 'wb') as file:
+        if file_name == 'mods.list':
+            pickle.dump([], file)
+        else:
+            pickle.dump({}, file)
+    print('------------------------------------------')
+    print('"' + file_name + '" reseted')
+    print('------------------------------------------')
+
+
+def show_mods_list(mode='everything'):
+    print(Fore.BLUE + '"mods.list" content:' + Fore.RESET)
+    with open('mods.list', 'rb') as file:
+        mods_list = pickle.load(file)
+        for mod in mods_list:
+            if mode == 'everything':
+                print(mod)
+            elif mode == 'name':
+                print(mod['name'])
+            elif mode == 'version':
+                print(mod['version'])
+            elif mode == 'updated':
+                print(mod['updated'])
+            elif mode == 'url':
+                print(mod['url'])
+            elif mode == 'mc_version':
+                try:
+                    print(mod['mc_version'])
+                except KeyError:
+                    print(mod['name'] + ' has no "mc_version"')
+    print('\nTotal: ' + str(len(mods_list)) + ' mods')
+
+
+def google(query):
+    urls = []
+    for url in googlesearch.search(query, tld="co.in", num=3, stop=3, pause=2):
+        urls.append(url)
+    return urls
+
+
+def transform_files_urls(urls):
+    new_urls = []
+    for url in urls:
+        new_url = re.findall(r'[\w\-:/.]+', url)[0]
+        new_urls.append(new_url + '/files/all')
+    return new_urls
+
+
+def get_mod_url(mod_name):
+    urls = transform_files_urls(google('curseforge.com ' + mod_name))
+    for _ in range(0, 2):
+        scraper = cfscrape.create_scraper()
+
+        with open('user.settings', 'rb') as file:
+            user_settings = pickle.load(file)
+
+        for url in urls:
+            print(url)
+            r = scraper.get(url)
+            soup = BS(r.content, 'html.parser')
+            try:
+                mod_versions = soup.select('.listing-container.listing-container-table:not(.custom-formatting) '
+                                           'table tbody tr')
+                for row in mod_versions:
+                    mc_version_container = row.select('.listing-container.listing-container-table:'
+                                                      'not(.custom-formatting) table tbody tr td')[4]
+
+                    mc_version = mc_version_container.select('.mr-2')[0].text
+                    mc_version = re.findall(r'[\w.]+', mc_version)[0]
+                    if mc_version == user_settings['mc_version']:
+                        return url
+
+            except IndexError:
+                pass
+
+        urls = transform_files_urls(google('curseforge.com ' + mod_name + 'updated'))
+    return False
+
+
+def reset_mods_updated_status():
+    with open('mods.list', 'rb') as file:
+        mods_list = pickle.load(file)
+
+    for mod in mods_list:
+        mod['updated'] = False
+
+    with open('mods.list', 'wb') as file:
+        pickle.dump(mods_list, file)
+
+    print(Fore.BLUE + "\nAll mods' updated statuses were reseted\n" + Fore.RESET)
+
+
+def clear_mods_list():
+    print(Fore.BLUE + '\nClearing mods list...' + Fore.RESET)
+
+    clearing_done = False
+    while not clearing_done:
+        clearing_done = True
+
+        with open('mods.list', 'rb') as file:
+            mods_list = pickle.load(file)
+
+        for mod in mods_list:
+            if not mod['updated']:
+                print(Fore.RED + mod['name'] + ' (' + mod['version'] + ')' + ' was removed from "mods.list"' +
+                      Fore.RESET)
+                mods_list.remove(mod)
+                with open('mods.list', 'wb') as file:
+                    pickle.dump(mods_list, file)
+                clearing_done = False
+
+    print(Fore.BLUE + 'Clearing done!\n' + Fore.RESET)
+
+
+def update_mods_url(reset=False):
+    with open('mods.list', 'rb') as file:
+        mods_list = pickle.load(file)
+
+    for mod in mods_list:
+        if not mod['url'] or reset:
+            try:
+                url = get_mod_url(mod['name'])
+                if url:
+                    mod['url'] = url
+                else:
+                    mod['url'] = 'url not found'
+                    print(Fore.RED + mod['name'] + ' (' + mod['version'] + ')' + ' url not found!' + Fore.RESET)
+            except error.HTTPError:
+                print(Fore.RED + 'HTTP Error 429: Too Many Requests\n' + Fore.RESET)
+                return False
+
+            with open('mods.list', 'wb') as file:
+                pickle.dump(mods_list, file)
+            print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ')' + ' url added:' + Fore.RESET)
+            print(mod['url'] + '\n')
+
+
+def check_user_settings():
+    with open('user.settings', 'rb') as file:
+        user_settings = pickle.load(file)
+    try:
+        version = user_settings['mc_version']
+        print('\nMinecraft version: ' + Fore.GREEN + version + Fore.RESET)
+    except KeyError:
+        user_settings['mc_version'] = input(Fore.CYAN + '\nEnter your Minecraft Version: ' + Fore.RESET)
+
+        with open('user.settings', 'wb') as file:
+            pickle.dump(user_settings, file)
+
+
+def update(reset=False):
+    if reset:
+        reset_file('mods.list')
+        reset_file('user.settings')
+    try:
+        reset_mods_updated_status()
+    except FileNotFoundError:
+        print(Fore.RED + 'No "mcmod.info" found' + Fore.RESET)
+        reset_file('mods.list')
+        reset_mods_updated_status()
+
+    for file in os.listdir(mods_dir):
+        file_path = os.path.join(mods_dir, file)
+
+        if not os.path.isdir(file_path):
+            # print(file_path)
+            mod_info = get_mod_info(file_path)
+
+            if mod_info:
+                update_mod_info(mod_info)
+
+    check_user_settings()
+    clear_mods_list()
+    update_mods_url()
+
+
+update()
+show_mods_list()
+
+
