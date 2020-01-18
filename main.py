@@ -7,6 +7,7 @@ from colorama import init, Fore
 from urllib import error
 from bs4 import BeautifulSoup as BS
 import cfscrape
+
 init()
 
 mods_dir = 'C:\\Users\\Tim PC\\AppData\\Roaming\\.minecraft\\mods'
@@ -59,7 +60,6 @@ def update_mod_info(mod_info):
     try:
         for mod in mods_list:
             if mod['name'] == mod_info['name'] and mod['version'] == mod_info['version']:
-
                 print(Fore.CYAN + mod_info['name'] + ' (' + mod_info['version'] + ')' + ' is already up to date' +
                       Fore.RESET)
                 mod['updated'] = True
@@ -105,22 +105,24 @@ def show_mods_list(mode='everything'):
     print(Fore.BLUE + '"mods.list" content:' + Fore.RESET)
     with open('mods.list', 'rb') as file:
         mods_list = pickle.load(file)
+        i = 0
         for mod in mods_list:
             if mode == 'everything':
-                print(mod)
+                print(str(i) + ') ' + str(mod))
             elif mode == 'name':
-                print(mod['name'])
+                print(str(i) + ') ' + mod['name'])
             elif mode == 'version':
-                print(mod['version'])
+                print(str(i) + ') ' + mod['version'])
             elif mode == 'updated':
-                print(mod['updated'])
+                print(str(i) + ') ' + mod['updated'])
             elif mode == 'url':
-                print(mod['url'])
+                print(str(i) + ') ' + mod['url'])
             elif mode == 'mc_version':
                 try:
-                    print(mod['mc_version'])
+                    print(str(i) + ') ' + mod['mc_version'])
                 except KeyError:
-                    print(mod['name'] + ' has no "mc_version"')
+                    print(str(i) + ') ' + mod['name'] + ' has no "mc_version"')
+            i += 1
     print('\nTotal: ' + str(len(mods_list)) + ' mods')
 
 
@@ -158,6 +160,7 @@ def get_mod_url(mod_name):
                     mc_version_container = row.select('.listing-container.listing-container-table:'
                                                       'not(.custom-formatting) table tbody tr td')[4]
 
+                    # TODO - Обработка forge
                     mc_version = mc_version_container.select('.mr-2')[0].text
                     mc_version = re.findall(r'[\w.]+', mc_version)[0]
                     if mc_version == user_settings['mc_version']:
@@ -267,7 +270,46 @@ def update(reset=False):
     update_mods_url()
 
 
-update()
-show_mods_list()
+# update()
+# show_mods_list('version')
+
+
+
+
+def test():
+    scraper = cfscrape.create_scraper()
+
+    with open('user.settings', 'rb') as file:
+        user_settings = pickle.load(file)
+
+    with open('mods.list', 'rb') as file:
+        mods_list = pickle.load(file)
+
+    for mod in mods_list:
+        r = scraper.get(mod['url'])
+        soup = BS(r.content, 'html.parser')
+
+        mod_versions = soup.select('.listing-container.listing-container-table:not(.custom-formatting) '
+                                   'table tbody tr')
+        for row in mod_versions:
+            mc_version_container = row.select('.listing-container.listing-container-table:'
+                                              'not(.custom-formatting) table tbody tr td')[4]
+
+            mc_version = mc_version_container.select('.mr-2')[0].text
+            mc_version = re.findall(r'[\w.]+', mc_version)[0]
+            if mc_version == user_settings['mc_version']:
+                top_row = row
+
+        version_container = top_row.select('.listing-container.listing-container-table:'
+                                       'not(.custom-formatting) table tbody tr td')[1]
+
+        version = version_container.select('a')[0].text
+        if mod['version'] in version:
+            print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ') ' + version)
+        else:
+            print(Fore.RED + mod['name'] + ' (' + mod['version'] + ') | ' + version)
+        print(mod['url'])
+
+test()
 
 
