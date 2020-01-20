@@ -143,12 +143,13 @@ def transform_files_urls(urls):
 
 def get_mod_url(mod_name):
     urls = transform_files_urls(google('curseforge.com ' + mod_name))
+
+    with open('user.settings', 'rb') as file:
+        user_settings = pickle.load(file)
+
+    scraper = cfscrape.create_scraper()
+
     for _ in range(0, 2):
-        scraper = cfscrape.create_scraper()
-
-        with open('user.settings', 'rb') as file:
-            user_settings = pickle.load(file)
-
         for url in urls:
             print(url)
             r = scraper.get(url)
@@ -165,6 +166,23 @@ def get_mod_url(mod_name):
                     mc_version = re.findall(r'[\w.]+', mc_version)[0]
                     if mc_version == user_settings['mc_version']:
                         return url
+
+                    elif mc_version == 'Forge':
+                        version_container = row.select('.listing-container.listing-container-table:'
+                                                       'not(.custom-formatting) table tbody tr td')[1]
+
+                        version = version_container.select('a')[0]
+                        forge_url = 'https://www.curseforge.com/' + version.get('href')
+                        r = scraper.get(forge_url)
+
+                        soup = BS(r.content, 'html.parser')
+                        container = soup.select('.border-gray--100')[1]
+                        mc_versions = container.select('.px-1')
+
+                        for mc_version in mc_versions:
+                            mc_version = re.findall(r'[\w. ]+', mc_version.text)
+                            if mc_version == user_settings['mc_version']:
+                                return url
 
             except IndexError:
                 pass
@@ -271,9 +289,7 @@ def update(reset=False):
 
 
 # update()
-# show_mods_list('version')
-
-
+# show_mods_list()
 
 
 def test():
@@ -299,17 +315,34 @@ def test():
             mc_version = re.findall(r'[\w.]+', mc_version)[0]
             if mc_version == user_settings['mc_version']:
                 top_row = row
+                break
 
         version_container = top_row.select('.listing-container.listing-container-table:'
-                                       'not(.custom-formatting) table tbody tr td')[1]
+                                           'not(.custom-formatting) table tbody tr td')[1]
 
         version = version_container.select('a')[0].text
+
         if mod['version'] in version:
-            print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ') ' + version)
+            print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ') ' + version + Fore.RESET)
         else:
-            print(Fore.RED + mod['name'] + ' (' + mod['version'] + ') | ' + version)
+            # edit_version = re.findall(r'[\d.]+', version)
+            # for version in edit_version:
+            #     if len(version) == len(mod['version']):
+            #         version = re.findall(r'[\d]+', version)
+            #         version = ''.join(version)
+            #         break
+            #
+            # mod['version'] = re.findall(r'[\d]+', mod['version'])
+            # mod['version'] = ''.join(mod['version'])
+            #
+            # print(2)
+            # print(int(version))
+            # print(int(mod['version']))
+            # if int(version) > int(mod['version']):
+            #     print(1)
+
+            print(Fore.RED + mod['name'] + ' (' + mod['version'] + ') | ' + version + Fore.RESET)
         print(mod['url'])
+        print()
 
 test()
-
-
