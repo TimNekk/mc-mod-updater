@@ -11,6 +11,7 @@ import cfscrape
 init()
 
 mods_dir = 'C:\\Users\\Tim PC\\AppData\\Roaming\\.minecraft\\mods'
+mods_exception = ['VoxelMap']
 
 
 def unzip(file_path):
@@ -30,6 +31,10 @@ def get_mod_info(file_path):
         mod_info = {
             'name': re.findall(r'[\"][\w].+', re.findall(r'name.{4}[\w\s]+', file_data)[0])[0][1::],
         }
+
+        if mod_info['name'] in mods_exception:
+            print(Fore.RED + mod_info['name'] + 'is not supported')
+            return False
 
         try:
             mod_info['version'] = re.findall(r'[\w.-]+',
@@ -180,7 +185,7 @@ def get_mod_url(mod_name):
                         mc_versions = container.select('.px-1')
 
                         for mc_version in mc_versions:
-                            mc_version = re.findall(r'[\w. ]+', mc_version.text)
+                            mc_version = re.findall(r'[\w. ]+', mc_version.text)[0]
                             if mc_version == user_settings['mc_version']:
                                 return url
 
@@ -266,6 +271,7 @@ def update(reset=False):
     if reset:
         reset_file('mods.list')
         reset_file('user.settings')
+
     try:
         reset_mods_updated_status()
     except FileNotFoundError:
@@ -289,7 +295,7 @@ def update(reset=False):
 
 
 # update()
-# show_mods_list()
+show_mods_list()
 
 
 def test():
@@ -301,45 +307,86 @@ def test():
     with open('mods.list', 'rb') as file:
         mods_list = pickle.load(file)
 
+    skip_mods = 0
+
     for mod in mods_list:
+        if skip_mods != 0:
+            skip_mods -= 1
+            continue
+
         r = scraper.get(mod['url'])
         soup = BS(r.content, 'html.parser')
 
         mod_versions = soup.select('.listing-container.listing-container-table:not(.custom-formatting) '
                                    'table tbody tr')
-        for row in mod_versions:
-            mc_version_container = row.select('.listing-container.listing-container-table:'
-                                              'not(.custom-formatting) table tbody tr td')[4]
 
-            mc_version = mc_version_container.select('.mr-2')[0].text
-            mc_version = re.findall(r'[\w.]+', mc_version)[0]
-            if mc_version == user_settings['mc_version']:
-                top_row = row
-                break
+        try:
+            for row in mod_versions:
+                mc_version_container = row.select('.listing-container.listing-container-table:'
+                                                  'not(.custom-formatting) table tbody tr td')[4]
+
+                mc_version = mc_version_container.select('.mr-2')[0].text
+                mc_version = re.findall(r'[\w.]+', mc_version)[0]
+
+                if mc_version == user_settings['mc_version']:
+                    top_row = row
+                    raise Exception()
+
+                elif mc_version == 'Forge':
+                    version_container = row.select('.listing-container.listing-container-table:'
+                                                   'not(.custom-formatting) table tbody tr td')[1]
+
+                    version = version_container.select('a')[0]
+                    forge_url = 'https://www.curseforge.com/' + version.get('href')
+                    r = scraper.get(forge_url)
+
+                    soup = BS(r.content, 'html.parser')
+                    container = soup.select('.border-gray--100')[1]
+                    mc_versions = container.select('.px-1')
+
+                    for mc_version in mc_versions:
+                        # print(mc_version)
+                        mc_version = re.findall(r'[\w. ]+', mc_version.text)[0]
+                        if mc_version == user_settings['mc_version']:
+                            top_row = row
+                            raise Exception()
+
+        except:
+            pass
 
         version_container = top_row.select('.listing-container.listing-container-table:'
                                            'not(.custom-formatting) table tbody tr td')[1]
 
         version = version_container.select('a')[0].text
+        mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
 
         if mod['version'] in version:
-            print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ') ' + version + Fore.RESET)
+            print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ') | ' + version + Fore.RESET)
         else:
-            # edit_version = re.findall(r'[\d.]+', version)
-            # for version in edit_version:
-            #     if len(version) == len(mod['version']):
-            #         version = re.findall(r'[\d]+', version)
-            #         version = ''.join(version)
-            #         break
-            #
-            # mod['version'] = re.findall(r'[\d]+', mod['version'])
-            # mod['version'] = ''.join(mod['version'])
-            #
-            # print(2)
-            # print(int(version))
-            # print(int(mod['version']))
-            # if int(version) > int(mod['version']):
-            #     print(1)
+            mod['version'] = re.findall(r'[\d]+', mod['version'])
+            mod['version'] = ''.join(mod['version'])
+            print('1) ' + version)
+            print('2) ' + mod['version'])
+
+            edit_version = re.findall(r'[\d.]+', version)
+            for version in edit_version:
+                if user_settings['mc_version'] in version or version == '.':
+                    continue
+
+                if version[-1] == '.':
+                    version = version[:-1]
+
+                version = re.findall(r'[\d]+', version)
+                version = ''.join(version)
+
+                print(version)
+                print(mod['version'])
+                break
+
+            print('Website - ' + str(int(version)))
+            print('Pc - ' + str(int(mod['version'])))
+            if int(version) > int(mod['version']):
+                print(1)
 
             print(Fore.RED + mod['name'] + ' (' + mod['version'] + ') | ' + version + Fore.RESET)
         print(mod['url'])
