@@ -7,6 +7,7 @@ from colorama import init, Fore
 from urllib import error
 from bs4 import BeautifulSoup as BS
 import cfscrape
+import shutil
 
 init()
 
@@ -23,17 +24,18 @@ def unzip(file_path):
     return True
 
 
-def get_mod_info(file_path):
+def get_mod_info(file_path, file_name):
     if unzip(file_path):
         with open('mcmod.info', 'rb') as file:
             file_data = str(file.read())
 
         mod_info = {
             'name': re.findall(r'[\"][\w].+', re.findall(r'name.{4}[\w\s]+', file_data)[0])[0][1::],
+            'file_name': file_name
         }
 
         if mod_info['name'] in mods_exception:
-            print(Fore.RED + mod_info['name'] + 'is not supported')
+            print(Fore.RED + mod_info['name'] + ' is not supported')
             return False
 
         try:
@@ -156,7 +158,6 @@ def get_mod_url(mod_name):
 
     for _ in range(0, 2):
         for url in urls:
-            print(url)
             r = scraper.get(url)
             soup = BS(r.content, 'html.parser')
             try:
@@ -267,37 +268,6 @@ def check_user_settings():
             pickle.dump(user_settings, file)
 
 
-def update(reset=False):
-    if reset:
-        reset_file('mods.list')
-        reset_file('user.settings')
-
-    try:
-        reset_mods_updated_status()
-    except FileNotFoundError:
-        print(Fore.RED + 'No "mcmod.info" found' + Fore.RESET)
-        reset_file('mods.list')
-        reset_mods_updated_status()
-
-    for file in os.listdir(mods_dir):
-        file_path = os.path.join(mods_dir, file)
-
-        if not os.path.isdir(file_path):
-            # print(file_path)
-            mod_info = get_mod_info(file_path)
-
-            if mod_info:
-                update_mod_info(mod_info)
-
-    check_user_settings()
-    clear_mods_list()
-    update_mods_url()
-
-
-# update()
-show_mods_list()
-
-
 def test():
     scraper = cfscrape.create_scraper()
 
@@ -307,7 +277,7 @@ def test():
     with open('mods.list', 'rb') as file:
         mods_list = pickle.load(file)
 
-    skip_mods = 0
+    skip_mods = 8
 
     for mod in mods_list:
         if skip_mods != 0:
@@ -345,7 +315,6 @@ def test():
                     mc_versions = container.select('.px-1')
 
                     for mc_version in mc_versions:
-                        # print(mc_version)
                         mc_version = re.findall(r'[\w. ]+', mc_version.text)[0]
                         if mc_version == user_settings['mc_version']:
                             top_row = row
@@ -357,18 +326,16 @@ def test():
         version_container = top_row.select('.listing-container.listing-container-table:'
                                            'not(.custom-formatting) table tbody tr td')[1]
 
-        version = version_container.select('a')[0].text
+        version_text = version_container.select('a')[0].text
         mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
 
-        if mod['version'] in version:
-            print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ') | ' + version + Fore.RESET)
+        if mod['version'] in version_text:
+            print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ') | ' + version_text + Fore.RESET)
         else:
             mod['version'] = re.findall(r'[\d]+', mod['version'])
             mod['version'] = ''.join(mod['version'])
-            print('1) ' + version)
-            print('2) ' + mod['version'])
 
-            edit_version = re.findall(r'[\d.]+', version)
+            edit_version = re.findall(r'[\d.]+', version_text)
             for version in edit_version:
                 if user_settings['mc_version'] in version or version == '.':
                     continue
@@ -379,17 +346,68 @@ def test():
                 version = re.findall(r'[\d]+', version)
                 version = ''.join(version)
 
-                print(version)
-                print(mod['version'])
                 break
 
-            print('Website - ' + str(int(version)))
-            print('Pc - ' + str(int(mod['version'])))
             if int(version) > int(mod['version']):
-                print(1)
+                download_container = top_row.select('.listing-container.listing-container-table:'
+                                                   'not(.custom-formatting) table tbody tr td')[6]
+
+                download_link = version_container.select('a')[0].get('href')
+                file_id = re.findall(r'files\/[\d]+', download_link)[0]
+                file_id = re.findall(r'[\d]+', file_id)[0]
+
+                link_start = re.findall(r'.+files', download_link)[0][:-5]
+
+                download_link = 'https://www.curseforge.com' + link_start + 'download/' + file_id + '/file'
+
+                mod_file = scraper.get(download_link)
+
+                mod_dir = mods_dir + '\\' + version_text
+                print(version_text)
+                if not re.findall(r'.jar', version_text):
+                    version_text += '.jar'
+                print(version_text)
+
+                with open(version_text, 'wb') as file:
+                    file.write(mod_file.content)
+
+                shutil.move(version_text, mod_dir)
+                os.remove(mods_dir + '\\' + mod['file_name'])
 
             print(Fore.RED + mod['name'] + ' (' + mod['version'] + ') | ' + version + Fore.RESET)
         print(mod['url'])
         print()
 
+
+def update(reset=False):
+    if reset:
+        reset_file('mods.list')
+        reset_file('user.settings')
+
+    try:
+        reset_mods_updated_status()
+    except FileNotFoundError:
+        print(Fore.RED + 'No "mcmod.info" found' + Fore.RESET)
+        reset_file('mods.list')
+        reset_mods_updated_status()
+
+    for file in os.listdir(mods_dir):
+        file_path = os.path.join(mods_dir, file)
+
+        if not os.path.isdir(file_path):
+            # print(file_path)
+            mod_info = get_mod_info(file_path, file)
+
+            if mod_info:
+                update_mod_info(mod_info)
+
+    check_user_settings()
+    clear_mods_list()
+    update_mods_url()
+
+
+update()
 test()
+show_mods_list()
+# update()
+
