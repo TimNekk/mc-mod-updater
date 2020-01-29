@@ -225,6 +225,7 @@ def clear_mods_list():
                 print(Fore.RED + mod['name'] + ' (' + mod['version'] + ')' + ' was removed from "mods.list"' +
                       Fore.RESET)
                 mods_list.remove(mod)
+
                 with open('mods.list', 'wb') as file:
                     pickle.dump(mods_list, file)
                 clearing_done = False
@@ -268,7 +269,9 @@ def check_user_settings():
             pickle.dump(user_settings, file)
 
 
-def test():
+def update_mods(save_old_mods=True):
+    print('test started')
+
     scraper = cfscrape.create_scraper()
 
     with open('user.settings', 'rb') as file:
@@ -277,14 +280,18 @@ def test():
     with open('mods.list', 'rb') as file:
         mods_list = pickle.load(file)
 
-    skip_mods = 8
+    skip_mods = 0
 
     for mod in mods_list:
         if skip_mods != 0:
             skip_mods -= 1
             continue
 
-        r = scraper.get(mod['url'])
+        try:
+            r = scraper.get(mod['url'])
+        except:
+            continue
+
         soup = BS(r.content, 'html.parser')
 
         mod_versions = soup.select('.listing-container.listing-container-table:not(.custom-formatting) '
@@ -322,12 +329,14 @@ def test():
 
         except:
             pass
-
         version_container = top_row.select('.listing-container.listing-container-table:'
                                            'not(.custom-formatting) table tbody tr td')[1]
 
         version_text = version_container.select('a')[0].text
-        mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
+        if re.findall(r'[\d.]+', mod['version'])[0] in user_settings['mc_version']:
+            mod['version'] = re.findall(r'[\d.]+', mod['version'])[1]
+        else:
+            mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
 
         if mod['version'] in version_text:
             print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ') | ' + version_text + Fore.RESET)
@@ -362,17 +371,28 @@ def test():
 
                 mod_file = scraper.get(download_link)
 
-                mod_dir = mods_dir + '\\' + version_text
-                print(version_text)
                 if not re.findall(r'.jar', version_text):
                     version_text += '.jar'
-                print(version_text)
 
                 with open(version_text, 'wb') as file:
                     file.write(mod_file.content)
 
-                shutil.move(version_text, mod_dir)
-                os.remove(mods_dir + '\\' + mod['file_name'])
+                if not os.path.exists(os.path.join(mods_dir, version_text)):
+                    shutil.move(version_text, mods_dir)
+
+                if save_old_mods:
+                    if not os.path.isdir(mods_dir + '\\' + 'Old mods'):
+                        os.mkdir(mods_dir + '\\' + 'Old mods')
+                    if os.path.exists(mods_dir + '\\' + 'Old mods' + '\\' + mod['file_name']):
+                        os.remove(mods_dir + '\\' + 'Old mods' + '\\' + mod['file_name'])
+                    shutil.move(mods_dir + '\\' + mod['file_name'], mods_dir + '\\' + 'Old mods')
+                else:
+                    os.remove(mods_dir + '\\' + mod['file_name'])
+
+                mods_list.remove(mod)
+
+                with open('mods.list', 'wb') as file:
+                    pickle.dump(mods_list, file)
 
             print(Fore.RED + mod['name'] + ' (' + mod['version'] + ') | ' + version + Fore.RESET)
         print(mod['url'])
@@ -407,7 +427,7 @@ def update(reset=False):
 
 
 update()
-test()
+update_mods()
 show_mods_list()
 # update()
 
