@@ -67,8 +67,9 @@ def update_mod_info(mod_info):
     try:
         for mod in mods_list:
             if mod['name'] == mod_info['name'] and mod['version'] == mod_info['version']:
-                print(Fore.CYAN + mod_info['name'] + ' (' + mod_info['version'] + ')' + ' is already up to date' +
-                      Fore.RESET)
+                print(Fore.CYAN +
+                      '{0} ({1}) is already up to date'.format(mod_info['name'], mod_info['version'])
+                      + Fore.RESET)
                 mod['updated'] = True
                 with open('mods.list', 'wb') as file:
                     pickle.dump(mods_list, file)
@@ -88,8 +89,9 @@ def update_mod_info(mod_info):
                 with open('mods.list', 'wb') as file:
                     pickle.dump(mods_list, file)
 
-        print(Fore.GREEN + mod_info['name'] + ' (' + mod_info['version'] + ')' + ' added to "mods.list"' +
-              Fore.RESET)
+        print(Fore.GREEN +
+              '{0} ({1}) added to "mods.list"'.format(mod_info['name'], mod_info['version'])
+              + Fore.RESET)
         with open('mods.list', 'wb') as file:
             pickle.dump(mods_list, file)
     except AttributeError:
@@ -109,28 +111,29 @@ def reset_file(file_name):
 
 
 def show_mods_list(mode='everything'):
-    print(Fore.BLUE + '"mods.list" content:' + Fore.RESET)
+    print(Fore.BLUE + '\n"mods.list" content:' + Fore.RESET)
     with open('mods.list', 'rb') as file:
         mods_list = pickle.load(file)
         i = 0
         for mod in mods_list:
             if mode == 'everything':
-                print(str(i) + ') ' + str(mod))
+                print('{0}) {1}'.format(i, mod))
             elif mode == 'name':
-                print(str(i) + ') ' + mod['name'])
+                print('{0}) {1}'.format(i, mod['name']))
             elif mode == 'version':
-                print(str(i) + ') ' + mod['version'])
+                print('{0}) {1}'.format(i, mod['version']))
             elif mode == 'updated':
-                print(str(i) + ') ' + mod['updated'])
+                print('{0}) {1}'.format(i, mod['updated']))
             elif mode == 'url':
-                print(str(i) + ') ' + mod['url'])
+                print('{0}) {1}'.format(i, mod['url']))
             elif mode == 'mc_version':
                 try:
                     print(str(i) + ') ' + mod['mc_version'])
+                    print('{0}) {1}'.format(i, mod['mc_version']))
                 except KeyError:
-                    print(str(i) + ') ' + mod['name'] + ' has no "mc_version"')
+                    print('{0}) {1} has no "mc_version"'.format(i, mod['name']))
             i += 1
-    print('\nTotal: ' + str(len(mods_list)) + ' mods')
+    print('\nTotal: {0} mods'.format(len(mods_list)))
 
 
 def google(query):
@@ -211,7 +214,7 @@ def reset_mods_updated_status():
 
 
 def clear_mods_list():
-    print(Fore.BLUE + '\nClearing mods list...' + Fore.RESET)
+    print(Fore.BLUE + '\nClearing mods list...\n' + Fore.RESET)
 
     clearing_done = False
     while not clearing_done:
@@ -222,18 +225,19 @@ def clear_mods_list():
 
         for mod in mods_list:
             if not mod['updated']:
-                print(Fore.RED + mod['name'] + ' (' + mod['version'] + ')' + ' was removed from "mods.list"' +
-                      Fore.RESET)
                 mods_list.remove(mod)
 
                 with open('mods.list', 'wb') as file:
                     pickle.dump(mods_list, file)
                 clearing_done = False
 
-    print(Fore.BLUE + 'Clearing done!\n' + Fore.RESET)
+                print(Fore.RED +
+                      '{0} ({1}) was removed from "mods.list"'.format(mod['name'], mod['version'])
+                      + Fore.RESET)
 
 
 def update_mods_url(reset=False):
+    print(Fore.BLUE + 'Mods url searching...')
     with open('mods.list', 'rb') as file:
         mods_list = pickle.load(file)
 
@@ -245,15 +249,18 @@ def update_mods_url(reset=False):
                     mod['url'] = url
                 else:
                     mod['url'] = 'url not found'
-                    print(Fore.RED + mod['name'] + ' (' + mod['version'] + ')' + ' url not found!' + Fore.RESET)
+                    print(Fore.RED +
+                          '{0} ({1}) url not found!\n'.format(mod['name'], mod['version'])
+                          + Fore.RESET)
             except error.HTTPError:
                 print(Fore.RED + 'HTTP Error 429: Too Many Requests\n' + Fore.RESET)
                 return False
 
             with open('mods.list', 'wb') as file:
                 pickle.dump(mods_list, file)
-            print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ')' + ' url added:' + Fore.RESET)
-            print(mod['url'] + '\n')
+            print(Fore.GREEN +
+                  '{0} ({1}) url added:\n{2}\n'.format(mod['name'], mod['version'], mod['url'])
+                  + Fore.RESET)
 
 
 def check_user_settings():
@@ -270,7 +277,9 @@ def check_user_settings():
 
 
 def update_mods(save_old_mods=True):
-    print('test started')
+    something_updated = False
+
+    print(Fore.BLUE + 'Mods updating...\n')
 
     scraper = cfscrape.create_scraper()
 
@@ -339,7 +348,9 @@ def update_mods(save_old_mods=True):
             mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
 
         if mod['version'] in version_text:
-            print(Fore.GREEN + mod['name'] + ' (' + mod['version'] + ') | ' + version_text + Fore.RESET)
+            print(Fore.GREEN +
+                  '{0} ({1}) is up to date'.format(mod['name'], mod['version'])
+                  + Fore.RESET)
         else:
             mod['version'] = re.findall(r'[\d]+', mod['version'])
             mod['version'] = ''.join(mod['version'])
@@ -358,6 +369,8 @@ def update_mods(save_old_mods=True):
                 break
 
             if int(version) > int(mod['version']):
+                something_updated = True
+
                 download_container = top_row.select('.listing-container.listing-container-table:'
                                                    'not(.custom-formatting) table tbody tr td')[6]
 
@@ -394,9 +407,10 @@ def update_mods(save_old_mods=True):
                 with open('mods.list', 'wb') as file:
                     pickle.dump(mods_list, file)
 
-            print(Fore.RED + mod['name'] + ' (' + mod['version'] + ') | ' + version + Fore.RESET)
-        print(mod['url'])
-        print()
+            print(Fore.RED +
+                  '{0} ({1}) -> ({2})'.format(mod['name'], mod['version'], version)
+                  + Fore.RESET)
+    return something_updated
 
 
 def update(reset=False):
@@ -421,13 +435,13 @@ def update(reset=False):
             if mod_info:
                 update_mod_info(mod_info)
 
-    check_user_settings()
-    clear_mods_list()
-    update_mods_url()
+    while True:
+        check_user_settings()
+        clear_mods_list()
+        update_mods_url()
+        if not update_mods():
+            show_mods_list()
+            break
 
 
 update()
-update_mods()
-show_mods_list()
-# update()
-
