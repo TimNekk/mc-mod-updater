@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>579</width>
-    <height>410</height>
+    <height>493</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -282,166 +282,20 @@
      <widget class="QWidget" name="middle_widget" native="true">
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <widget class="QFrame" name="mod_slot_2">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+        <widget class="QScrollArea" name="scrollArea">
+         <property name="widgetResizable">
+          <bool>true</bool>
          </property>
-         <property name="styleSheet">
-          <string notr="true">border-radius: 10px;
-border: 1px solid rgb(50, 50, 50);
-border-radius: 7px;</string>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_5">
-          <property name="spacing">
-           <number>7</number>
+         <widget class="QWidget" name="scrollAreaWidgetContents">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>529</width>
+            <height>69</height>
+           </rect>
           </property>
-          <property name="leftMargin">
-           <number>7</number>
-          </property>
-          <property name="topMargin">
-           <number>7</number>
-          </property>
-          <property name="rightMargin">
-           <number>7</number>
-          </property>
-          <property name="bottomMargin">
-           <number>7</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="mod_slot_2_count_label">
-            <property name="minimumSize">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(50, 50, 50);</string>
-            </property>
-            <property name="text">
-             <string>1</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="mod_slot_2_name_button">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="cursor">
-             <cursorShape>PointingHandCursor</cursorShape>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: none;
-border: none;
-
-hover {
-	background-color: none;
-}</string>
-            </property>
-            <property name="text">
-             <string>Industrial Craft 2</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="mod_slot_2_horizontalSpacer">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QLabel" name="mod_slot_2_version_lable">
-            <property name="styleSheet">
-             <string notr="true">border: none;</string>
-            </property>
-            <property name="text">
-             <string>v12.34.52</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="mod_slot_2_update_button">
-            <property name="minimumSize">
-             <size>
-              <width>75</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>75</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="cursor">
-             <cursorShape>PointingHandCursor</cursorShape>
-            </property>
-            <property name="text">
-             <string>Update</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="mod_slot_2_delete_button">
-            <property name="minimumSize">
-             <size>
-              <width>75</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>75</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="cursor">
-             <cursorShape>PointingHandCursor</cursorShape>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">color: rgb(255, 47, 50)</string>
-            </property>
-            <property name="text">
-             <string>Delete</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         </widget>
         </widget>
        </item>
        <item>
@@ -497,7 +351,7 @@ border-radius: 7px;</string>
              <string notr="true">background-color: rgb(50, 50, 50);</string>
             </property>
             <property name="text">
-             <string>2</string>
+             <string>1</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
@@ -522,11 +376,15 @@ border-radius: 7px;</string>
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: none;
-border: none;
-
-hover {
+             <string notr="true">* {
 	background-color: none;
+	border: none;
+	color: white;
+}
+
+*:hover {
+	background-color: none;
+	color: rgb(165, 165, 165)
 }</string>
             </property>
             <property name="text">
@@ -608,6 +466,173 @@ hover {
         </widget>
        </item>
        <item>
+        <widget class="QFrame" name="mod_slot_2">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">border-radius: 10px;
+border: 1px solid rgb(50, 50, 50);
+border-radius: 7px;</string>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <property name="spacing">
+           <number>7</number>
+          </property>
+          <property name="leftMargin">
+           <number>7</number>
+          </property>
+          <property name="topMargin">
+           <number>7</number>
+          </property>
+          <property name="rightMargin">
+           <number>7</number>
+          </property>
+          <property name="bottomMargin">
+           <number>7</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="mod_slot_2_count_label">
+            <property name="minimumSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(50, 50, 50);</string>
+            </property>
+            <property name="text">
+             <string>2</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="mod_slot_2_name_button">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">* {
+	background-color: none;
+	border: none;
+	color: white;
+}
+
+*:hover {
+	background-color: none;
+	color: rgb(165, 165, 165)
+}</string>
+            </property>
+            <property name="text">
+             <string>Industrial Craft 2</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="mod_slot_2_horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="mod_slot_2_version_lable">
+            <property name="styleSheet">
+             <string notr="true">border: none;</string>
+            </property>
+            <property name="text">
+             <string>v12.34.52</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="mod_slot_2_update_button">
+            <property name="minimumSize">
+             <size>
+              <width>75</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>75</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="text">
+             <string>Update</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="mod_slot_2_delete_button">
+            <property name="minimumSize">
+             <size>
+              <width>75</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>75</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: rgb(255, 47, 50)</string>
+            </property>
+            <property name="text">
+             <string>Delete</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QFrame" name="mod_slot_3">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -643,7 +668,7 @@ border-radius: 7px;</string>
            <number>7</number>
           </property>
           <item>
-           <widget class="QLabel" name="mod_slot_2_count_label_2">
+           <widget class="QLabel" name="mod_slot_3_count_label">
             <property name="minimumSize">
              <size>
               <width>20</width>
@@ -668,7 +693,7 @@ border-radius: 7px;</string>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="mod_slot_2_name_button_2">
+           <widget class="QPushButton" name="mod_slot_3_name_button">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -685,11 +710,15 @@ border-radius: 7px;</string>
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: none;
-border: none;
-
-hover {
+             <string notr="true">* {
 	background-color: none;
+	border: none;
+	color: white;
+}
+
+*:hover {
+	background-color: none;
+	color: rgb(165, 165, 165)
 }</string>
             </property>
             <property name="text">
@@ -698,7 +727,7 @@ hover {
            </widget>
           </item>
           <item>
-           <spacer name="mod_slot_2_horizontalSpacer_2">
+           <spacer name="mod_slot_3_horizontalSpacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -711,7 +740,7 @@ hover {
            </spacer>
           </item>
           <item>
-           <widget class="QLabel" name="mod_slot_2_version_lable_2">
+           <widget class="QLabel" name="mod_slot_3_version_lable">
             <property name="styleSheet">
              <string notr="true">border: none;</string>
             </property>
@@ -721,7 +750,7 @@ hover {
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="mod_slot_2_update_button_2">
+           <widget class="QPushButton" name="mod_slot_3_update_button">
             <property name="minimumSize">
              <size>
               <width>75</width>
@@ -743,7 +772,7 @@ hover {
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="mod_slot_2_delete_button_2">
+           <widget class="QPushButton" name="mod_slot_3_delete_button">
             <property name="minimumSize">
              <size>
               <width>75</width>
@@ -777,8 +806,8 @@ hover {
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>20</width>
-           <height>40</height>
+           <width>0</width>
+           <height>0</height>
           </size>
          </property>
         </spacer>
