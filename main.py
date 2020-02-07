@@ -343,7 +343,10 @@ def update_mods(save_old_mods=True):
 
         version_text = version_container.select('a')[0].text
         if re.findall(r'[\d.]+', mod['version'])[0] in user_settings['mc_version']:
-            mod['version'] = re.findall(r'[\d.]+', mod['version'])[1]
+            try:
+                mod['version'] = re.findall(r'[\d.]+', mod['version'])[1]
+            except IndexError:
+                mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
         else:
             mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
 
