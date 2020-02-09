@@ -1,450 +1,734 @@
-import zipfile
-import re
-import os
-import googlesearch
-import pickle
-from colorama import init, Fore
-from urllib import error
-from bs4 import BeautifulSoup as BS
-import cfscrape
-import shutil
-
-init()
-
-mods_dir = 'C:\\Users\\Tim PC\\AppData\\Roaming\\.minecraft\\mods'
-mods_exception = ['VoxelMap']
-
-
-def unzip(file_path):
-    archive = zipfile.ZipFile(file_path, 'r')
-    try:
-        archive.extract('mcmod.info')
-    except KeyError:
-        return False
-    return True
-
-
-def get_mod_info(file_path, file_name):
-    if unzip(file_path):
-        with open('mcmod.info', 'rb') as file:
-            file_data = str(file.read())
-
-        mod_info = {
-            'name': re.findall(r'[\"][\w].+', re.findall(r'name.{4}[\w\s]+', file_data)[0])[0][1::],
-            'file_name': file_name
-        }
-
-        if mod_info['name'] in mods_exception:
-            print(Fore.RED + mod_info['name'] + ' is not supported')
-            return False
-
-        try:
-            mod_info['version'] = re.findall(r'[\w.-]+',
-                                             re.findall(r'\"version.{4}[\w.-]+', file_data)[0][::-1])[0][::-1]
-        except IndexError:
-            print(Fore.RED + mod_info['name'] + ' - no "Version" found' + Fore.RESET)
-            return False
-
-        try:
-            mod_info['mc_version'] = re.findall(r'[\"][\w].+',
-                                                re.findall(r'mcversion.{4}[\w.-]+', file_data)[0])[0][1::]
-        except IndexError:
-            pass
-
-        os.remove('mcmod.info')
-
-        return mod_info
-    else:
-        print(Fore.RED + 'No "mcmod.info" found: ' + Fore.RESET)
-        print(Fore.RED + file_path)
-    return False
-
-
-def update_mod_info(mod_info):
-    with open('mods.list', 'rb') as file:
-        mods_list = pickle.load(file)
-
-    try:
-        for mod in mods_list:
-            if mod['name'] == mod_info['name'] and mod['version'] == mod_info['version']:
-                print(Fore.CYAN +
-                      '{0} ({1}) is already up to date'.format(mod_info['name'], mod_info['version'])
-                      + Fore.RESET)
-                mod['updated'] = True
-                with open('mods.list', 'wb') as file:
-                    pickle.dump(mods_list, file)
-                return True
-
-    except TypeError:
-        print('Update_mod_info() - TypeError happened!')
-        reset_file('mods.list')
-
-    try:
-        mods_list.append(mod_info)
-
-        for mod in mods_list:
-            if mod['name'] == mod_info['name']:
-                mod['updated'] = True
-                mod['url'] = False
-                with open('mods.list', 'wb') as file:
-                    pickle.dump(mods_list, file)
-
-        print(Fore.GREEN +
-              '{0} ({1}) added to "mods.list"'.format(mod_info['name'], mod_info['version'])
-              + Fore.RESET)
-        with open('mods.list', 'wb') as file:
-            pickle.dump(mods_list, file)
-    except AttributeError:
-        print('Update_mod_info() - AttributeError happened!')
-        reset_file('mods.list')
-
-
-def reset_file(file_name):
-    with open(file_name, 'wb') as file:
-        if file_name == 'mods.list':
-            pickle.dump([], file)
-        else:
-            pickle.dump({}, file)
-    print('------------------------------------------')
-    print('"' + file_name + '" reseted')
-    print('------------------------------------------')
-
-
-def show_mods_list(mode='everything'):
-    print(Fore.BLUE + '\n"mods.list" content:' + Fore.RESET)
-    with open('mods.list', 'rb') as file:
-        mods_list = pickle.load(file)
-        i = 0
-        for mod in mods_list:
-            if mode == 'everything':
-                print('{0}) {1}'.format(i, mod))
-            elif mode == 'name':
-                print('{0}) {1}'.format(i, mod['name']))
-            elif mode == 'version':
-                print('{0}) {1}'.format(i, mod['version']))
-            elif mode == 'updated':
-                print('{0}) {1}'.format(i, mod['updated']))
-            elif mode == 'url':
-                print('{0}) {1}'.format(i, mod['url']))
-            elif mode == 'mc_version':
-                try:
-                    print(str(i) + ') ' + mod['mc_version'])
-                    print('{0}) {1}'.format(i, mod['mc_version']))
-                except KeyError:
-                    print('{0}) {1} has no "mc_version"'.format(i, mod['name']))
-            i += 1
-    print('\nTotal: {0} mods'.format(len(mods_list)))
-
-
-def google(query):
-    urls = []
-    for url in googlesearch.search(query, tld="co.in", num=3, stop=3, pause=2):
-        urls.append(url)
-    return urls
-
-
-def transform_files_urls(urls):
-    new_urls = []
-    for url in urls:
-        new_url = re.findall(r'[\w\-:/.]+', url)[0]
-        new_urls.append(new_url + '/files/all')
-    return new_urls
-
-
-def get_mod_url(mod_name):
-    urls = transform_files_urls(google('curseforge.com ' + mod_name))
-
-    with open('user.settings', 'rb') as file:
-        user_settings = pickle.load(file)
-
-    scraper = cfscrape.create_scraper()
-
-    for _ in range(0, 2):
-        for url in urls:
-            r = scraper.get(url)
-            soup = BS(r.content, 'html.parser')
-            try:
-                mod_versions = soup.select('.listing-container.listing-container-table:not(.custom-formatting) '
-                                           'table tbody tr')
-                for row in mod_versions:
-                    mc_version_container = row.select('.listing-container.listing-container-table:'
-                                                      'not(.custom-formatting) table tbody tr td')[4]
-
-                    # TODO - Обработка forge
-                    mc_version = mc_version_container.select('.mr-2')[0].text
-                    mc_version = re.findall(r'[\w.]+', mc_version)[0]
-                    if mc_version == user_settings['mc_version']:
-                        return url
-
-                    elif mc_version == 'Forge':
-                        version_container = row.select('.listing-container.listing-container-table:'
-                                                       'not(.custom-formatting) table tbody tr td')[1]
-
-                        version = version_container.select('a')[0]
-                        forge_url = 'https://www.curseforge.com/' + version.get('href')
-                        r = scraper.get(forge_url)
-
-                        soup = BS(r.content, 'html.parser')
-                        container = soup.select('.border-gray--100')[1]
-                        mc_versions = container.select('.px-1')
-
-                        for mc_version in mc_versions:
-                            mc_version = re.findall(r'[\w. ]+', mc_version.text)[0]
-                            if mc_version == user_settings['mc_version']:
-                                return url
-
-            except IndexError:
-                pass
-
-        urls = transform_files_urls(google('curseforge.com ' + mod_name + 'updated'))
-    return False
-
-
-def reset_mods_updated_status():
-    with open('mods.list', 'rb') as file:
-        mods_list = pickle.load(file)
-
-    for mod in mods_list:
-        mod['updated'] = False
-
-    with open('mods.list', 'wb') as file:
-        pickle.dump(mods_list, file)
-
-    print(Fore.BLUE + "\nAll mods' updated statuses were reseted\n" + Fore.RESET)
-
-
-def clear_mods_list():
-    print(Fore.BLUE + '\nClearing mods list...\n' + Fore.RESET)
-
-    clearing_done = False
-    while not clearing_done:
-        clearing_done = True
-
-        with open('mods.list', 'rb') as file:
-            mods_list = pickle.load(file)
-
-        for mod in mods_list:
-            if not mod['updated']:
-                mods_list.remove(mod)
-
-                with open('mods.list', 'wb') as file:
-                    pickle.dump(mods_list, file)
-                clearing_done = False
-
-                print(Fore.RED +
-                      '{0} ({1}) was removed from "mods.list"'.format(mod['name'], mod['version'])
-                      + Fore.RESET)
-
-
-def update_mods_url(reset=False):
-    print(Fore.BLUE + 'Mods url searching...')
-    with open('mods.list', 'rb') as file:
-        mods_list = pickle.load(file)
-
-    for mod in mods_list:
-        if not mod['url'] or reset:
-            try:
-                url = get_mod_url(mod['name'])
-                if url:
-                    mod['url'] = url
-                else:
-                    mod['url'] = 'url not found'
-                    print(Fore.RED +
-                          '{0} ({1}) url not found!\n'.format(mod['name'], mod['version'])
-                          + Fore.RESET)
-            except error.HTTPError:
-                print(Fore.RED + 'HTTP Error 429: Too Many Requests\n' + Fore.RESET)
-                return False
-
-            with open('mods.list', 'wb') as file:
-                pickle.dump(mods_list, file)
-            print(Fore.GREEN +
-                  '{0} ({1}) url added:\n{2}\n'.format(mod['name'], mod['version'], mod['url'])
-                  + Fore.RESET)
-
-
-def check_user_settings():
-    with open('user.settings', 'rb') as file:
-        user_settings = pickle.load(file)
-    try:
-        version = user_settings['mc_version']
-        print('\nMinecraft version: ' + Fore.GREEN + version + Fore.RESET)
-    except KeyError:
-        user_settings['mc_version'] = input(Fore.CYAN + '\nEnter your Minecraft Version: ' + Fore.RESET)
-
-        with open('user.settings', 'wb') as file:
-            pickle.dump(user_settings, file)
-
-
-def update_mods(save_old_mods=True):
-    something_updated = False
-
-    print(Fore.BLUE + 'Mods updating...\n')
-
-    scraper = cfscrape.create_scraper()
-
-    with open('user.settings', 'rb') as file:
-        user_settings = pickle.load(file)
-
-    with open('mods.list', 'rb') as file:
-        mods_list = pickle.load(file)
-
-    skip_mods = 0
-
-    for mod in mods_list:
-        if skip_mods != 0:
-            skip_mods -= 1
-            continue
-
-        try:
-            r = scraper.get(mod['url'])
-        except:
-            continue
-
-        soup = BS(r.content, 'html.parser')
-
-        mod_versions = soup.select('.listing-container.listing-container-table:not(.custom-formatting) '
-                                   'table tbody tr')
-
-        try:
-            for row in mod_versions:
-                mc_version_container = row.select('.listing-container.listing-container-table:'
-                                                  'not(.custom-formatting) table tbody tr td')[4]
-
-                mc_version = mc_version_container.select('.mr-2')[0].text
-                mc_version = re.findall(r'[\w.]+', mc_version)[0]
-
-                if mc_version == user_settings['mc_version']:
-                    top_row = row
-                    raise Exception()
-
-                elif mc_version == 'Forge':
-                    version_container = row.select('.listing-container.listing-container-table:'
-                                                   'not(.custom-formatting) table tbody tr td')[1]
-
-                    version = version_container.select('a')[0]
-                    forge_url = 'https://www.curseforge.com/' + version.get('href')
-                    r = scraper.get(forge_url)
-
-                    soup = BS(r.content, 'html.parser')
-                    container = soup.select('.border-gray--100')[1]
-                    mc_versions = container.select('.px-1')
-
-                    for mc_version in mc_versions:
-                        mc_version = re.findall(r'[\w. ]+', mc_version.text)[0]
-                        if mc_version == user_settings['mc_version']:
-                            top_row = row
-                            raise Exception()
-
-        except:
-            pass
-        version_container = top_row.select('.listing-container.listing-container-table:'
-                                           'not(.custom-formatting) table tbody tr td')[1]
-
-        version_text = version_container.select('a')[0].text
-        if re.findall(r'[\d.]+', mod['version'])[0] in user_settings['mc_version']:
-            try:
-                mod['version'] = re.findall(r'[\d.]+', mod['version'])[1]
-            except IndexError:
-                mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
-        else:
-            mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
-
-        if mod['version'] in version_text:
-            print(Fore.GREEN +
-                  '{0} ({1}) is up to date'.format(mod['name'], mod['version'])
-                  + Fore.RESET)
-        else:
-            mod['version'] = re.findall(r'[\d]+', mod['version'])
-            mod['version'] = ''.join(mod['version'])
-
-            edit_version = re.findall(r'[\d.]+', version_text)
-            for version in edit_version:
-                if user_settings['mc_version'] in version or version == '.':
-                    continue
-
-                if version[-1] == '.':
-                    version = version[:-1]
-
-                version = re.findall(r'[\d]+', version)
-                version = ''.join(version)
-
-                break
-
-            if int(version) > int(mod['version']):
-                something_updated = True
-
-                download_container = top_row.select('.listing-container.listing-container-table:'
-                                                   'not(.custom-formatting) table tbody tr td')[6]
-
-                download_link = version_container.select('a')[0].get('href')
-                file_id = re.findall(r'files\/[\d]+', download_link)[0]
-                file_id = re.findall(r'[\d]+', file_id)[0]
-
-                link_start = re.findall(r'.+files', download_link)[0][:-5]
-
-                download_link = 'https://www.curseforge.com' + link_start + 'download/' + file_id + '/file'
-
-                mod_file = scraper.get(download_link)
-
-                if not re.findall(r'.jar', version_text):
-                    version_text += '.jar'
-
-                with open(version_text, 'wb') as file:
-                    file.write(mod_file.content)
-
-                if not os.path.exists(os.path.join(mods_dir, version_text)):
-                    shutil.move(version_text, mods_dir)
-
-                if save_old_mods:
-                    if not os.path.isdir(mods_dir + '\\' + 'Old mods'):
-                        os.mkdir(mods_dir + '\\' + 'Old mods')
-                    if os.path.exists(mods_dir + '\\' + 'Old mods' + '\\' + mod['file_name']):
-                        os.remove(mods_dir + '\\' + 'Old mods' + '\\' + mod['file_name'])
-                    shutil.move(mods_dir + '\\' + mod['file_name'], mods_dir + '\\' + 'Old mods')
-                else:
-                    os.remove(mods_dir + '\\' + mod['file_name'])
-
-                mods_list.remove(mod)
-
-                with open('mods.list', 'wb') as file:
-                    pickle.dump(mods_list, file)
-
-            print(Fore.RED +
-                  '{0} ({1}) -> ({2})'.format(mod['name'], mod['version'], version)
-                  + Fore.RESET)
-    return something_updated
-
-
-def update(reset=False):
-    if reset:
-        reset_file('mods.list')
-        reset_file('user.settings')
-
-    try:
-        reset_mods_updated_status()
-    except FileNotFoundError:
-        print(Fore.RED + 'No "mcmod.info" found' + Fore.RESET)
-        reset_file('mods.list')
-        reset_mods_updated_status()
-
-    for file in os.listdir(mods_dir):
-        file_path = os.path.join(mods_dir, file)
-
-        if not os.path.isdir(file_path):
-            # print(file_path)
-            mod_info = get_mod_info(file_path, file)
-
-            if mod_info:
-                update_mod_info(mod_info)
-
-    while True:
-        check_user_settings()
-        clear_mods_list()
-        update_mods_url()
-        if not update_mods():
-            show_mods_list()
-            break
-
-
-update()
+from PyQt5 import QtCore, QtGui, QtWidgets
+import sys
+
+
+class UiMainWindow(object):
+    def setup_ui(self, main_window):
+        main_window.setObjectName("main_window")
+        main_window.resize(579, 558)
+
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(main_window.sizePolicy().hasHeightForWidth())
+        main_window.setSizePolicy(size_policy)
+        main_window.setStyleSheet("#main_widget {\n"
+                                  "    border-radius: 0px;\n"
+                                  "    background-color: rgb(50, 50, 50);\n"
+                                  "}\n"
+                                  "\n"
+                                  ".QWidget {\n"
+                                  "    background-color: rgb(37, 37, 37);\n"
+                                  "    border-radius:10px;\n"
+                                  "}\n"
+                                  "\n"
+                                  "\n"
+                                  ".QPushButton {\n"
+                                  "    background-color:rgb(50, 50, 50);\n"
+                                  "    transition:background-color;\n"
+                                  "    color: white;\n"
+                                  "    border-radius: 10px;\n"
+                                  "    font: 10pt \"Arial\";\n"
+                                  "}\n"
+                                  "\n"
+                                  ".QPushButton:hover {\n"
+                                  "    background-color:rgb(60, 60, 60);\n"
+                                  "}\n"
+                                  "\n"
+                                  ".QLabel, .QCheckBox {\n"
+                                  "    color: white;\n"
+                                  "    font: 10pt \"Arial\";\n"
+                                  "}\n"
+                                  "\n"
+                                  "#title {\n"
+                                  "    font: 75 18pt \"Arial\";\n"
+                                  "}\n"
+                                  "\n"
+                                  "#program_version {\n"
+                                  "    margin-top: 6px\n"
+                                  "}\n"
+                                  "\n"
+                                  ".QComboBox {\n"
+                                  "    background-color: rgb(50, 50, 50);\n"
+                                  "    color: white;\n"
+                                  "    border-radius: 10px;\n"
+                                  "    font: 10pt \"Arial\";\n"
+                                  "}\n"
+                                  "\n"
+                                  ".QScrollArea {\n"
+                                  "    border-radius:10px 10px 0px 0px;\n"
+                                  "    background-color: rgb(37, 37, 37);\n"
+                                  "}\n"
+                                  "\n"
+                                  "#mods_page, #console_page, #settings_page {\n"
+                                  "    background-color: rgb(50, 50, 50);\n"
+                                  "}\n"
+                                  "\n"
+                                  ".QPlainTextEdit {\n"
+                                  "    background-color: rgb(37, 37, 37);\n"
+                                  "    color: white;\n"
+                                  "    font: 8pt \"Arial\";\n"
+                                  "}\n"
+                                  "\n"
+                                  ".Line {\n"
+                                  "    color: rgb(50, 50, 50);\n"
+                                  "}\n"
+                                  "\n"
+                                  ".QLineEdit {\n"
+                                  "    background-color: rgb(50, 50, 50);\n"
+                                  "    border-radius: 5px;\n"
+                                  "    color: white;\n"
+                                  "    border:1px solid rgb(255, 47, 50)\n"
+                                  "}\n"
+                                  "\n"
+                                  "\n"
+                                  "#font_size_label {\n"
+                                  "    font: 75 12pt \"Arial\";\n"
+                                  "}")
+        main_window.setTabShape(QtWidgets.QTabWidget.Rounded)
+
+
+        self.main_widget = QtWidgets.QWidget(main_window)
+        self.main_widget.setStyleSheet("")
+        self.main_widget.setObjectName("main_widget")
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.main_widget)
+        self.verticalLayout_2.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
+        self.verticalLayout_2.setContentsMargins(15, 15, 15, 15)
+        self.verticalLayout_2.setSpacing(15)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.title_widget = QtWidgets.QWidget(self.main_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.title_widget.sizePolicy().hasHeightForWidth())
+        self.title_widget.setSizePolicy(size_policy)
+        self.title_widget.setObjectName("title_widget")
+        self.horizontalLayout_4 = QtWidgets.QHBoxLayout(self.title_widget)
+        self.horizontalLayout_4.setSizeConstraint(QtWidgets.QLayout.SetMaximumSize)
+        self.horizontalLayout_4.setContentsMargins(15, 15, 15, 15)
+        self.horizontalLayout_4.setSpacing(6)
+        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
+        self.title = QtWidgets.QLabel(self.title_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.title.sizePolicy().hasHeightForWidth())
+        self.title.setSizePolicy(size_policy)
+        self.title.setObjectName("title")
+        self.horizontalLayout_4.addWidget(self.title)
+        self.program_version = QtWidgets.QLabel(self.title_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.program_version.sizePolicy().hasHeightForWidth())
+        self.program_version.setSizePolicy(size_policy)
+        self.program_version.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.program_version.setAlignment(QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        self.program_version.setObjectName("program_version")
+        self.horizontalLayout_4.addWidget(self.program_version)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_4.addItem(spacerItem)
+        self.verticalLayout_2.addWidget(self.title_widget)
+        self.top_widget = QtWidgets.QWidget(self.main_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.top_widget.sizePolicy().hasHeightForWidth())
+        self.top_widget.setSizePolicy(size_policy)
+        self.top_widget.setObjectName("top_widget")
+        self.horizontalLayout_6 = QtWidgets.QHBoxLayout(self.top_widget)
+        self.horizontalLayout_6.setSizeConstraint(QtWidgets.QLayout.SetMaximumSize)
+        self.horizontalLayout_6.setContentsMargins(15, 15, 15, 15)
+        self.horizontalLayout_6.setSpacing(15)
+        self.horizontalLayout_6.setObjectName("horizontalLayout_6")
+        self.mods_button = QtWidgets.QPushButton(self.top_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.mods_button.sizePolicy().hasHeightForWidth())
+        self.mods_button.setSizePolicy(size_policy)
+        self.mods_button.setMinimumSize(QtCore.QSize(125, 40))
+        self.mods_button.setMaximumSize(QtCore.QSize(16777215, 40))
+        self.mods_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mods_button.setObjectName("mods_button")
+        self.horizontalLayout_6.addWidget(self.mods_button)
+        self.console_button = QtWidgets.QPushButton(self.top_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.console_button.sizePolicy().hasHeightForWidth())
+        self.console_button.setSizePolicy(size_policy)
+        self.console_button.setMinimumSize(QtCore.QSize(125, 40))
+        self.console_button.setMaximumSize(QtCore.QSize(16777215, 40))
+        self.console_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.console_button.setObjectName("console_button")
+        self.horizontalLayout_6.addWidget(self.console_button)
+        self.settings_button = QtWidgets.QPushButton(self.top_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.settings_button.sizePolicy().hasHeightForWidth())
+        self.settings_button.setSizePolicy(size_policy)
+        self.settings_button.setMinimumSize(QtCore.QSize(125, 40))
+        self.settings_button.setMaximumSize(QtCore.QSize(16777215, 40))
+        self.settings_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.settings_button.setObjectName("settings_button")
+        self.horizontalLayout_6.addWidget(self.settings_button)
+        self.verticalLayout_2.addWidget(self.top_widget)
+        self.stacked_widget = QtWidgets.QStackedWidget(self.main_widget)
+        palette = QtGui.QPalette()
+        self.stacked_widget.setPalette(palette)
+        self.stacked_widget.setStyleSheet("")
+        self.stacked_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.stacked_widget.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.stacked_widget.setLineWidth(0)
+        self.stacked_widget.setMidLineWidth(0)
+        self.stacked_widget.setObjectName("stacked_widget")
+        self.mods_page = QtWidgets.QWidget()
+        palette = QtGui.QPalette()
+        brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Button, brush)
+        brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Base, brush)
+        brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Window, brush)
+        brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Button, brush)
+        brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Base, brush)
+        brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Window, brush)
+        brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Button, brush)
+        brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Base, brush)
+        brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Window, brush)
+        self.mods_page.setPalette(palette)
+        self.mods_page.setStyleSheet("")
+        self.mods_page.setObjectName("mods_page")
+        self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.mods_page)
+        self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_4.setSpacing(15)
+        self.verticalLayout_4.setObjectName("verticalLayout_4")
+        self.update_widget = QtWidgets.QWidget(self.mods_page)
+        self.update_widget.setEnabled(True)
+        self.update_widget.setObjectName("update_widget")
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.update_widget)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout.setSpacing(0)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.scrollArea = QtWidgets.QScrollArea(self.update_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.scrollArea.sizePolicy().hasHeightForWidth())
+        self.scrollArea.setSizePolicy(size_policy)
+        self.scrollArea.setMinimumSize(QtCore.QSize(0, 0))
+        self.scrollArea.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.scrollArea.setFrameShadow(QtWidgets.QFrame.Plain)
+        self.scrollArea.setLineWidth(0)
+        self.scrollArea.setMidLineWidth(0)
+        self.scrollArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        self.scrollArea.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustIgnored)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setAlignment(QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        self.scrollArea.setObjectName("scrollArea")
+        self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 549, 138))
+        self.scrollAreaWidgetContents.setStyleSheet("")
+        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
+        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.mod_slot_1 = QtWidgets.QFrame(self.scrollAreaWidgetContents)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.mod_slot_1.sizePolicy().hasHeightForWidth())
+        self.mod_slot_1.setSizePolicy(size_policy)
+        self.mod_slot_1.setStyleSheet("border-radius: 10px;\n"
+                                      "border: 1px solid rgb(50, 50, 50);\n"
+                                      "border-radius: 7px;")
+        self.mod_slot_1.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.mod_slot_1.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.mod_slot_1.setObjectName("mod_slot_1")
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self.mod_slot_1)
+        self.horizontalLayout.setContentsMargins(7, 7, 7, 7)
+        self.horizontalLayout.setSpacing(7)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.mod_slot_1_count_label = QtWidgets.QLabel(self.mod_slot_1)
+        self.mod_slot_1_count_label.setMinimumSize(QtCore.QSize(20, 20))
+        self.mod_slot_1_count_label.setMaximumSize(QtCore.QSize(20, 20))
+        self.mod_slot_1_count_label.setStyleSheet("background-color: rgb(50, 50, 50);")
+        self.mod_slot_1_count_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.mod_slot_1_count_label.setObjectName("mod_slot_1_count_label")
+        self.horizontalLayout.addWidget(self.mod_slot_1_count_label)
+        self.mod_slot_1_name_button = QtWidgets.QPushButton(self.mod_slot_1)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.mod_slot_1_name_button.sizePolicy().hasHeightForWidth())
+        self.mod_slot_1_name_button.setSizePolicy(size_policy)
+        self.mod_slot_1_name_button.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        self.mod_slot_1_name_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_1_name_button.setStyleSheet("* {\n"
+                                                  "    background-color: none;\n"
+                                                  "    border: none;\n"
+                                                  "    color: white;\n"
+                                                  "}\n"
+                                                  "\n"
+                                                  "*:hover {\n"
+                                                  "    background-color: none;\n"
+                                                  "    color: rgb(165, 165, 165)\n"
+                                                  "}")
+        self.mod_slot_1_name_button.setObjectName("mod_slot_1_name_button")
+        self.horizontalLayout.addWidget(self.mod_slot_1_name_button)
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem1)
+        self.mod_slot_1_version_lable = QtWidgets.QLabel(self.mod_slot_1)
+        self.mod_slot_1_version_lable.setStyleSheet("border: none;")
+        self.mod_slot_1_version_lable.setObjectName("mod_slot_1_version_lable")
+        self.horizontalLayout.addWidget(self.mod_slot_1_version_lable)
+        self.mod_slot_1_update_button = QtWidgets.QPushButton(self.mod_slot_1)
+        self.mod_slot_1_update_button.setMinimumSize(QtCore.QSize(75, 20))
+        self.mod_slot_1_update_button.setMaximumSize(QtCore.QSize(75, 16777215))
+        self.mod_slot_1_update_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_1_update_button.setObjectName("mod_slot_1_update_button")
+        self.horizontalLayout.addWidget(self.mod_slot_1_update_button)
+        self.mod_slot_1_delete_button = QtWidgets.QPushButton(self.mod_slot_1)
+        self.mod_slot_1_delete_button.setMinimumSize(QtCore.QSize(75, 20))
+        self.mod_slot_1_delete_button.setMaximumSize(QtCore.QSize(75, 16777215))
+        self.mod_slot_1_delete_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_1_delete_button.setStyleSheet("color: rgb(255, 47, 50)")
+        self.mod_slot_1_delete_button.setObjectName("mod_slot_1_delete_button")
+        self.horizontalLayout.addWidget(self.mod_slot_1_delete_button)
+        self.verticalLayout_3.addWidget(self.mod_slot_1)
+        self.mod_slot_2 = QtWidgets.QFrame(self.scrollAreaWidgetContents)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.mod_slot_2.sizePolicy().hasHeightForWidth())
+        self.mod_slot_2.setSizePolicy(size_policy)
+        self.mod_slot_2.setStyleSheet("border-radius: 10px;\n"
+                                      "border: 1px solid rgb(50, 50, 50);\n"
+                                      "border-radius: 7px;")
+        self.mod_slot_2.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.mod_slot_2.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.mod_slot_2.setObjectName("mod_slot_2")
+        self.horizontalLayout_5 = QtWidgets.QHBoxLayout(self.mod_slot_2)
+        self.horizontalLayout_5.setContentsMargins(7, 7, 7, 7)
+        self.horizontalLayout_5.setSpacing(7)
+        self.horizontalLayout_5.setObjectName("horizontalLayout_5")
+        self.mod_slot_2_count_label = QtWidgets.QLabel(self.mod_slot_2)
+        self.mod_slot_2_count_label.setMinimumSize(QtCore.QSize(20, 20))
+        self.mod_slot_2_count_label.setMaximumSize(QtCore.QSize(20, 20))
+        self.mod_slot_2_count_label.setStyleSheet("background-color: rgb(50, 50, 50);")
+        self.mod_slot_2_count_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.mod_slot_2_count_label.setObjectName("mod_slot_2_count_label")
+        self.horizontalLayout_5.addWidget(self.mod_slot_2_count_label)
+        self.mod_slot_2_name_button = QtWidgets.QPushButton(self.mod_slot_2)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.mod_slot_2_name_button.sizePolicy().hasHeightForWidth())
+        self.mod_slot_2_name_button.setSizePolicy(size_policy)
+        self.mod_slot_2_name_button.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        self.mod_slot_2_name_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_2_name_button.setStyleSheet("* {\n"
+                                                  "    background-color: none;\n"
+                                                  "    border: none;\n"
+                                                  "    color: white;\n"
+                                                  "}\n"
+                                                  "\n"
+                                                  "*:hover {\n"
+                                                  "    background-color: none;\n"
+                                                  "    color: rgb(165, 165, 165)\n"
+                                                  "}")
+        self.mod_slot_2_name_button.setObjectName("mod_slot_2_name_button")
+        self.horizontalLayout_5.addWidget(self.mod_slot_2_name_button)
+        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_5.addItem(spacerItem2)
+        self.mod_slot_2_version_lable = QtWidgets.QLabel(self.mod_slot_2)
+        self.mod_slot_2_version_lable.setStyleSheet("border: none;")
+        self.mod_slot_2_version_lable.setObjectName("mod_slot_2_version_lable")
+        self.horizontalLayout_5.addWidget(self.mod_slot_2_version_lable)
+        self.mod_slot_2_update_button = QtWidgets.QPushButton(self.mod_slot_2)
+        self.mod_slot_2_update_button.setMinimumSize(QtCore.QSize(75, 20))
+        self.mod_slot_2_update_button.setMaximumSize(QtCore.QSize(75, 16777215))
+        self.mod_slot_2_update_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_2_update_button.setObjectName("mod_slot_2_update_button")
+        self.horizontalLayout_5.addWidget(self.mod_slot_2_update_button)
+        self.mod_slot_2_delete_button = QtWidgets.QPushButton(self.mod_slot_2)
+        self.mod_slot_2_delete_button.setMinimumSize(QtCore.QSize(75, 20))
+        self.mod_slot_2_delete_button.setMaximumSize(QtCore.QSize(75, 16777215))
+        self.mod_slot_2_delete_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_2_delete_button.setStyleSheet("color: rgb(255, 47, 50)")
+        self.mod_slot_2_delete_button.setObjectName("mod_slot_2_delete_button")
+        self.horizontalLayout_5.addWidget(self.mod_slot_2_delete_button)
+        self.verticalLayout_3.addWidget(self.mod_slot_2)
+        self.mod_slot_3 = QtWidgets.QFrame(self.scrollAreaWidgetContents)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.mod_slot_3.sizePolicy().hasHeightForWidth())
+        self.mod_slot_3.setSizePolicy(size_policy)
+        self.mod_slot_3.setStyleSheet("border-radius: 10px;\n"
+                                      "border: 1px solid rgb(50, 50, 50);\n"
+                                      "border-radius: 7px;")
+        self.mod_slot_3.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.mod_slot_3.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.mod_slot_3.setObjectName("mod_slot_3")
+        self.horizontalLayout_7 = QtWidgets.QHBoxLayout(self.mod_slot_3)
+        self.horizontalLayout_7.setContentsMargins(7, 7, 7, 7)
+        self.horizontalLayout_7.setSpacing(7)
+        self.horizontalLayout_7.setObjectName("horizontalLayout_7")
+        self.mod_slot_3_count_label = QtWidgets.QLabel(self.mod_slot_3)
+        self.mod_slot_3_count_label.setMinimumSize(QtCore.QSize(20, 20))
+        self.mod_slot_3_count_label.setMaximumSize(QtCore.QSize(20, 20))
+        self.mod_slot_3_count_label.setStyleSheet("background-color: rgb(50, 50, 50);")
+        self.mod_slot_3_count_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.mod_slot_3_count_label.setObjectName("mod_slot_3_count_label")
+        self.horizontalLayout_7.addWidget(self.mod_slot_3_count_label)
+        self.mod_slot_3_name_button = QtWidgets.QPushButton(self.mod_slot_3)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.mod_slot_3_name_button.sizePolicy().hasHeightForWidth())
+        self.mod_slot_3_name_button.setSizePolicy(size_policy)
+        self.mod_slot_3_name_button.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        self.mod_slot_3_name_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_3_name_button.setStyleSheet("* {\n"
+                                                  "    background-color: none;\n"
+                                                  "    border: none;\n"
+                                                  "    color: white;\n"
+                                                  "}\n"
+                                                  "\n"
+                                                  "*:hover {\n"
+                                                  "    background-color: none;\n"
+                                                  "    color: rgb(165, 165, 165)\n"
+                                                  "}")
+        self.mod_slot_3_name_button.setObjectName("mod_slot_3_name_button")
+        self.horizontalLayout_7.addWidget(self.mod_slot_3_name_button)
+        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_7.addItem(spacerItem3)
+        self.mod_slot_3_version_lable = QtWidgets.QLabel(self.mod_slot_3)
+        self.mod_slot_3_version_lable.setStyleSheet("border: none;")
+        self.mod_slot_3_version_lable.setObjectName("mod_slot_3_version_lable")
+        self.horizontalLayout_7.addWidget(self.mod_slot_3_version_lable)
+        self.mod_slot_3_update_button = QtWidgets.QPushButton(self.mod_slot_3)
+        self.mod_slot_3_update_button.setMinimumSize(QtCore.QSize(75, 20))
+        self.mod_slot_3_update_button.setMaximumSize(QtCore.QSize(75, 16777215))
+        self.mod_slot_3_update_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_3_update_button.setObjectName("mod_slot_3_update_button")
+        self.horizontalLayout_7.addWidget(self.mod_slot_3_update_button)
+        self.mod_slot_3_delete_button = QtWidgets.QPushButton(self.mod_slot_3)
+        self.mod_slot_3_delete_button.setMinimumSize(QtCore.QSize(75, 20))
+        self.mod_slot_3_delete_button.setMaximumSize(QtCore.QSize(75, 16777215))
+        self.mod_slot_3_delete_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_3_delete_button.setStyleSheet("color: rgb(255, 47, 50)")
+        self.mod_slot_3_delete_button.setObjectName("mod_slot_3_delete_button")
+        self.horizontalLayout_7.addWidget(self.mod_slot_3_delete_button)
+        self.verticalLayout_3.addWidget(self.mod_slot_3)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.verticalLayout.addWidget(self.scrollArea)
+        spacerItem4 = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout.addItem(spacerItem4)
+        self.verticalLayout_4.addWidget(self.update_widget)
+        self.mods_widget = QtWidgets.QWidget(self.mods_page)
+        self.mods_widget.setEnabled(True)
+        self.mods_widget.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.mods_widget.setObjectName("mods_widget")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.mods_widget)
+        self.horizontalLayout_2.setSizeConstraint(QtWidgets.QLayout.SetMaximumSize)
+        self.horizontalLayout_2.setContentsMargins(15, 15, 15, 15)
+        self.horizontalLayout_2.setSpacing(15)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.mc_version_label = QtWidgets.QLabel(self.mods_widget)
+        self.mc_version_label.setObjectName("mc_version_label")
+        self.horizontalLayout_2.addWidget(self.mc_version_label)
+        self.mc_version_select_box = QtWidgets.QComboBox(self.mods_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.mc_version_select_box.sizePolicy().hasHeightForWidth())
+        self.mc_version_select_box.setSizePolicy(size_policy)
+        self.mc_version_select_box.setMinimumSize(QtCore.QSize(75, 0))
+        self.mc_version_select_box.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mc_version_select_box.setAcceptDrops(False)
+        self.mc_version_select_box.setEditable(False)
+        self.mc_version_select_box.setInsertPolicy(QtWidgets.QComboBox.InsertAlphabetically)
+        self.mc_version_select_box.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContentsOnFirstShow)
+        self.mc_version_select_box.setDuplicatesEnabled(False)
+        self.mc_version_select_box.setFrame(True)
+        self.mc_version_select_box.setObjectName("mc_version_select_box")
+        self.mc_version_select_box.addItem("")
+        self.mc_version_select_box.addItem("")
+        self.horizontalLayout_2.addWidget(self.mc_version_select_box)
+        spacerItem5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem5)
+        self.refresh_button = QtWidgets.QPushButton(self.mods_widget)
+        self.refresh_button.setMinimumSize(QtCore.QSize(125, 40))
+        self.refresh_button.setMaximumSize(QtCore.QSize(125, 40))
+        self.refresh_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.refresh_button.setObjectName("refresh_button")
+        self.horizontalLayout_2.addWidget(self.refresh_button)
+        self.update_all_button = QtWidgets.QPushButton(self.mods_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.update_all_button.sizePolicy().hasHeightForWidth())
+        self.update_all_button.setSizePolicy(size_policy)
+        self.update_all_button.setMinimumSize(QtCore.QSize(125, 40))
+        self.update_all_button.setMaximumSize(QtCore.QSize(125, 40))
+        self.update_all_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.update_all_button.setObjectName("update_all_button")
+        self.horizontalLayout_2.addWidget(self.update_all_button)
+        self.verticalLayout_4.addWidget(self.mods_widget)
+        self.stacked_widget.addWidget(self.mods_page)
+        self.console_page = QtWidgets.QWidget()
+        self.console_page.setObjectName("console_page")
+        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.console_page)
+        self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_5.setSpacing(15)
+        self.verticalLayout_5.setObjectName("verticalLayout_5")
+        self.console_widget = QtWidgets.QWidget(self.console_page)
+        self.console_widget.setObjectName("console_widget")
+        self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.console_widget)
+        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.plainTextEdit = QtWidgets.QPlainTextEdit(self.console_widget)
+        font = QtGui.QFont()
+        font.setFamily("Arial")
+        font.setPointSize(8)
+        font.setBold(False)
+        font.setItalic(False)
+        font.setWeight(50)
+        self.plainTextEdit.setFont(font)
+        self.plainTextEdit.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.plainTextEdit.setFrameShadow(QtWidgets.QFrame.Plain)
+        self.plainTextEdit.setObjectName("plainTextEdit")
+        self.horizontalLayout_3.addWidget(self.plainTextEdit)
+        self.verticalLayout_5.addWidget(self.console_widget)
+        self.stacked_widget.addWidget(self.console_page)
+        self.settings_page = QtWidgets.QWidget()
+        self.settings_page.setObjectName("settings_page")
+        self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.settings_page)
+        self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_6.setSpacing(15)
+        self.verticalLayout_6.setObjectName("verticalLayout_6")
+        self.settings_widget = QtWidgets.QWidget(self.settings_page)
+        self.settings_widget.setObjectName("settings_widget")
+        self.verticalLayout_7 = QtWidgets.QVBoxLayout(self.settings_widget)
+        self.verticalLayout_7.setContentsMargins(15, 15, 15, 15)
+        self.verticalLayout_7.setSpacing(15)
+        self.verticalLayout_7.setObjectName("verticalLayout_7")
+        self.path_widget = QtWidgets.QWidget(self.settings_widget)
+        self.path_widget.setMinimumSize(QtCore.QSize(0, 25))
+        self.path_widget.setMaximumSize(QtCore.QSize(16777215, 56))
+        self.path_widget.setObjectName("path_widget")
+        self.horizontalLayout_11 = QtWidgets.QHBoxLayout(self.path_widget)
+        self.horizontalLayout_11.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_11.setSpacing(15)
+        self.horizontalLayout_11.setObjectName("horizontalLayout_11")
+        self.path_line_edit = QtWidgets.QLineEdit(self.path_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.path_line_edit.sizePolicy().hasHeightForWidth())
+        self.path_line_edit.setSizePolicy(size_policy)
+        self.path_line_edit.setMinimumSize(QtCore.QSize(0, 0))
+        self.path_line_edit.setText("")
+        self.path_line_edit.setFrame(False)
+        self.path_line_edit.setReadOnly(True)
+        self.path_line_edit.setObjectName("path_line_edit")
+        self.horizontalLayout_11.addWidget(self.path_line_edit)
+        self.browse_button = QtWidgets.QPushButton(self.path_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.browse_button.sizePolicy().hasHeightForWidth())
+        self.browse_button.setSizePolicy(size_policy)
+        self.browse_button.setMinimumSize(QtCore.QSize(125, 0))
+        self.browse_button.setMaximumSize(QtCore.QSize(125, 16777215))
+        self.browse_button.setObjectName("pushButton")
+        self.horizontalLayout_11.addWidget(self.browse_button)
+        self.verticalLayout_7.addWidget(self.path_widget)
+        self.line = QtWidgets.QFrame(self.settings_widget)
+        self.line.setFrameShadow(QtWidgets.QFrame.Plain)
+        self.line.setLineWidth(2)
+        self.line.setFrameShape(QtWidgets.QFrame.HLine)
+        self.line.setObjectName("line")
+        self.verticalLayout_7.addWidget(self.line)
+        self.check_box_widget = QtWidgets.QWidget(self.settings_widget)
+        self.check_box_widget.setObjectName("check_box_widget")
+        self.verticalLayout_8 = QtWidgets.QVBoxLayout(self.check_box_widget)
+        self.verticalLayout_8.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_8.setObjectName("verticalLayout_8")
+        self.save_check_box = QtWidgets.QCheckBox(self.check_box_widget)
+        palette = QtGui.QPalette()
+        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.WindowText, brush)
+        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.ButtonText, brush)
+        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.WindowText, brush)
+        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.ButtonText, brush)
+        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.WindowText, brush)
+        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.ButtonText, brush)
+        self.save_check_box.setPalette(palette)
+        self.save_check_box.setObjectName("save_check_box")
+        self.verticalLayout_8.addWidget(self.save_check_box)
+        self.dark_check_box = QtWidgets.QCheckBox(self.check_box_widget)
+        self.dark_check_box.setChecked(True)
+        self.dark_check_box.setObjectName("dark_check_box")
+        self.verticalLayout_8.addWidget(self.dark_check_box)
+        self.verticalLayout_7.addWidget(self.check_box_widget)
+        self.line_3 = QtWidgets.QFrame(self.settings_widget)
+        self.line_3.setFrameShadow(QtWidgets.QFrame.Plain)
+        self.line_3.setLineWidth(2)
+        self.line_3.setFrameShape(QtWidgets.QFrame.HLine)
+        self.line_3.setObjectName("line_3")
+        self.verticalLayout_7.addWidget(self.line_3)
+        self.slide_widget = QtWidgets.QWidget(self.settings_widget)
+        self.slide_widget.setObjectName("slide_widget")
+        self.horizontalLayout_10 = QtWidgets.QHBoxLayout(self.slide_widget)
+        self.horizontalLayout_10.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_10.setSpacing(15)
+        self.horizontalLayout_10.setObjectName("horizontalLayout_10")
+        self.font_label = QtWidgets.QLabel(self.slide_widget)
+        self.font_label.setObjectName("font_label")
+        self.horizontalLayout_10.addWidget(self.font_label)
+        self.font_size_label = QtWidgets.QLabel(self.slide_widget)
+        self.font_size_label.setObjectName("font_size_label")
+        self.horizontalLayout_10.addWidget(self.font_size_label)
+        self.horizontal_slider = QtWidgets.QSlider(self.slide_widget)
+        self.horizontal_slider.setMaximumSize(QtCore.QSize(150, 15))
+        self.horizontal_slider.setMinimum(6)
+        self.horizontal_slider.setMaximum(16)
+        self.horizontal_slider.setPageStep(1)
+        self.horizontal_slider.setProperty("value", 8)
+        self.horizontal_slider.setTracking(True)
+        self.horizontal_slider.setOrientation(QtCore.Qt.Horizontal)
+        self.horizontal_slider.setInvertedAppearance(False)
+        self.horizontal_slider.setInvertedControls(False)
+        self.horizontal_slider.setTickPosition(QtWidgets.QSlider.NoTicks)
+        self.horizontal_slider.setObjectName("horizontal_slider")
+        self.horizontalLayout_10.addWidget(self.horizontal_slider)
+        spacerItem6 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_10.addItem(spacerItem6)
+        self.verticalLayout_7.addWidget(self.slide_widget)
+        self.line_2 = QtWidgets.QFrame(self.settings_widget)
+        self.line_2.setFrameShadow(QtWidgets.QFrame.Plain)
+        self.line_2.setLineWidth(2)
+        self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
+        self.line_2.setObjectName("line_2")
+        self.verticalLayout_7.addWidget(self.line_2)
+        spacerItem7 = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_7.addItem(spacerItem7)
+        self.apply_widget = QtWidgets.QWidget(self.settings_widget)
+        self.apply_widget.setObjectName("apply_widget")
+        self.horizontalLayout_9 = QtWidgets.QHBoxLayout(self.apply_widget)
+        self.horizontalLayout_9.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_9.setSpacing(15)
+        self.horizontalLayout_9.setObjectName("horizontalLayout_9")
+        spacerItem8 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_9.addItem(spacerItem8)
+        self.default_button = QtWidgets.QPushButton(self.apply_widget)
+        self.default_button.setMinimumSize(QtCore.QSize(125, 40))
+        self.default_button.setMaximumSize(QtCore.QSize(125, 40))
+        self.default_button.setObjectName("pushButton_2")
+        self.horizontalLayout_9.addWidget(self.default_button)
+        self.apply_button = QtWidgets.QPushButton(self.apply_widget)
+        self.apply_button.setMinimumSize(QtCore.QSize(125, 40))
+        self.apply_button.setMaximumSize(QtCore.QSize(125, 40))
+        self.apply_button.setObjectName("apply_button")
+        self.horizontalLayout_9.addWidget(self.apply_button)
+        self.verticalLayout_7.addWidget(self.apply_widget)
+        self.verticalLayout_6.addWidget(self.settings_widget)
+        self.stacked_widget.addWidget(self.settings_page)
+        self.verticalLayout_2.addWidget(self.stacked_widget)
+        main_window.setCentralWidget(self.main_widget)
+
+        self.retranslate_ui(main_window)
+        self.stacked_widget.setCurrentIndex(2)
+        self.mc_version_select_box.setCurrentIndex(0)
+        QtCore.QMetaObject.connectSlotsByName(main_window)
+
+    def retranslate_ui(self, main_window):
+        _translate = QtCore.QCoreApplication.translate
+        main_window.setWindowTitle(_translate("main_window", "MainWindow"))
+        self.title.setText(_translate("main_window", "Minecraft Mods Updater"))
+        self.program_version.setText(_translate("main_window", "v0.1"))
+        self.mods_button.setText(_translate("main_window", "Mods"))
+        self.console_button.setText(_translate("main_window", "Console"))
+        self.settings_button.setText(_translate("main_window", "Settings"))
+
+        self.mod_slot_1_count_label.setText(_translate("main_window", "1"))
+        self.mod_slot_1_name_button.setText(_translate("main_window", "Immersive Engineering"))
+        self.mod_slot_1_version_lable.setText(_translate("main_window", "v123.324.21"))
+        self.mod_slot_1_update_button.setText(_translate("main_window", "Update"))
+        self.mod_slot_1_delete_button.setText(_translate("main_window", "Delete"))
+
+        self.mod_slot_2_count_label.setText(_translate("main_window", "2"))
+        self.mod_slot_2_name_button.setText(_translate("main_window", "Industrial Craft 2"))
+        self.mod_slot_2_version_lable.setText(_translate("main_window", "v12.34.52"))
+        self.mod_slot_2_update_button.setText(_translate("main_window", "Update"))
+        self.mod_slot_2_delete_button.setText(_translate("main_window", "Delete"))
+
+        self.mod_slot_3_count_label.setText(_translate("main_window", "3"))
+        self.mod_slot_3_name_button.setText(_translate("main_window", "Applied Energistics 2"))
+        self.mod_slot_3_version_lable.setText(_translate("main_window", "v55.32.123"))
+        self.mod_slot_3_update_button.setText(_translate("main_window", "Update"))
+        self.mod_slot_3_delete_button.setText(_translate("main_window", "Delete"))
+
+        self.mc_version_label.setText(_translate("main_window", "Your MC version"))
+        self.mc_version_select_box.setCurrentText(_translate("main_window", "1.14"))
+        self.mc_version_select_box.setItemText(0, _translate("main_window", "1.14"))
+        self.mc_version_select_box.setItemText(1, _translate("main_window", "1.12.2"))
+
+        self.refresh_button.setText(_translate("main_window", "Refresh"))
+        self.update_all_button.setText(_translate("main_window", "Update all"))
+        self.plainTextEdit.setPlainText(_translate("main_window", "Console Text\n"))
+        self.path_line_edit.setPlaceholderText(_translate("main_window", "Minecraft Path"))
+        self.browse_button.setText(_translate("main_window", "Browse"))
+        self.save_check_box.setText(_translate("main_window", "Save old mods"))
+        self.dark_check_box.setText(_translate("main_window", "Dark Theme"))
+        self.font_label.setText(_translate("main_window", "Console font size"))
+        self.font_size_label.setText(_translate("main_window", "8"))
+        self.default_button.setText(_translate("main_window", "Default"))
+        self.apply_button.setText(_translate("main_window", "Apply"))
+
+
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = QtWidgets.QMainWindow()
+    ui = UiMainWindow()
+    ui.setup_ui(MainWindow)
+    MainWindow.show()
+    sys.exit(app.exec_())
