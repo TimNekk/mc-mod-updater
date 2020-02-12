@@ -416,6 +416,25 @@ def update_mods(save_old_mods=True):
     return something_updated
 
 
+def edit_user_mc_path(path):
+    with open('user.settings', 'rb') as file:
+        user_settings = pickle.load(file)
+
+    user_settings['mc_path'] = path
+
+    with open('user.settings', 'wb') as file:
+        pickle.dump(user_settings, file)
+
+
+def get_user_mc_path():
+    with open('user.settings', 'rb') as file:
+        try:
+            print()
+            return pickle.load(file)['mc_path']
+        except:
+            return False
+
+
 def update(reset=False):
     if reset:
         reset_file('mods.list')
@@ -447,4 +466,4 @@ def update(reset=False):
             break
 
 
-update()
+# update(True)
