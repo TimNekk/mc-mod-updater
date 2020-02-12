@@ -1,6 +1,6 @@
-# Created by .ignore support plugin (hsz.mobi)
 .google-cookie
 .idea
 mods.list
 user.settings
 venv/
+__pycache__/

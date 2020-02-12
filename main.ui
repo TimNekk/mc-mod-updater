@@ -23,9 +23,7 @@
    <string notr="true">#main_widget {
 	border-radius: 0px;
 	background-color: rgb(50, 50, 50);
-}
-
-.QWidget {
+}.QWidget {
 	background-color: rgb(37, 37, 37);
 	border-radius:10px;
 }
@@ -336,7 +334,7 @@
        <number>0</number>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="mods_page">
        <property name="palette">
