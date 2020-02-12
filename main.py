@@ -1,9 +1,19 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
+import script as s
+
+
 # noinspection PyAttributeOutsideInit
 
 
 class UiMainWindow(object):
+    def __init__(self):
+        self.color_dark_grey = 'rgb(37, 37, 37);'
+        self.color_light_grey = 'rgb(50, 50, 50);'
+        self.color_red = 'rgb(255, 47, 50)'
+        self.border_color = self.color_red
+
+
     def setup_ui(self, main_window):
         main_window.setObjectName("main_window")
         main_window.resize(579, 558)
@@ -13,81 +23,6 @@ class UiMainWindow(object):
         size_policy.setVerticalStretch(0)
         size_policy.setHeightForWidth(main_window.sizePolicy().hasHeightForWidth())
         main_window.setSizePolicy(size_policy)
-        main_window.setStyleSheet("#main_widget {\n"
-                                  "    border-radius: 0px;\n"
-                                  "    background-color: rgb(50, 50, 50);\n"
-                                  "}\n"
-                                  "\n"
-                                  ".QWidget {\n"
-                                  "    background-color: rgb(37, 37, 37);\n"
-                                  "    border-radius:10px;\n"
-                                  "}\n"
-                                  "\n"
-                                  "\n"
-                                  ".QPushButton {\n"
-                                  "    background-color:rgb(50, 50, 50);\n"
-                                  "    transition:background-color;\n"
-                                  "    color: white;\n"
-                                  "    border-radius: 10px;\n"
-                                  "    font: 10pt \"Arial\";\n"
-                                  "}\n"
-                                  "\n"
-                                  ".QPushButton:hover {\n"
-                                  "    background-color:rgb(60, 60, 60);\n"
-                                  "}\n"
-                                  "\n"
-                                  ".QLabel, .QCheckBox {\n"
-                                  "    color: white;\n"
-                                  "    font: 10pt \"Arial\";\n"
-                                  "}\n"
-                                  "\n"
-                                  "#title {\n"
-                                  "    font: 75 18pt \"Arial\";\n"
-                                  "}\n"
-                                  "\n"
-                                  "#program_version {\n"
-                                  "    margin-top: 6px\n"
-                                  "}\n"
-                                  "\n"
-                                  ".QComboBox {\n"
-                                  "    background-color: rgb(50, 50, 50);\n"
-                                  "    color: white;\n"
-                                  "    border-radius: 10px;\n"
-                                  "    font: 10pt \"Arial\";\n"
-                                  "}\n"
-                                  "\n"
-                                  ".QScrollArea {\n"
-                                  "    border-radius:10px 10px 0px 0px;\n"
-                                  "    background-color: rgb(37, 37, 37);\n"
-                                  "}\n"
-                                  "\n"
-                                  "#mods_page, #console_page, #settings_page {\n"
-                                  "    background-color: rgb(50, 50, 50);\n"
-                                  "}\n"
-                                  "\n"
-                                  ".QPlainTextEdit {\n"
-                                  "    background-color: rgb(37, 37, 37);\n"
-                                  "    color: white;\n"
-                                  "    font: 8pt \"Arial\";\n"
-                                  "    border: 1px solid rgb(50, 50, 50);\n"
-                                  "    border-radius: 10px;\n"
-                                  "}\n"
-                                  "\n"
-                                  ".Line {\n"
-                                  "    color: rgb(50, 50, 50);\n"
-                                  "}\n"
-                                  "\n"
-                                  ".QLineEdit {\n"
-                                  "    background-color: rgb(50, 50, 50);\n"
-                                  "    border-radius: 5px;\n"
-                                  "    color: white;\n"
-                                  "    border:1px solid rgb(255, 47, 50)\n"
-                                  "}\n"
-                                  "\n"
-                                  "\n"
-                                  "#font_size_label {\n"
-                                  "    font: 75 12pt \"Arial\";\n"
-                                  "}")
         main_window.setTabShape(QtWidgets.QTabWidget.Rounded)
 
         # main_widget
@@ -328,7 +263,7 @@ class UiMainWindow(object):
         # size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
         # size_policy.setHorizontalStretch(0)
         # size_policy.setVerticalStretch(0)
-        # size_policy.setHeightForWidth(self.mod_slot_2.sizePolicy().hasHeightForWidth())
+        # size_policy.setHeightForWidth(self.mod_slot_2.size_policy().hasHeightForWidth())
         # self.mod_slot_2.setSizePolicy(size_policy)
         # self.mod_slot_2.setStyleSheet("border-radius: 10px;\n"
         #                               "border: 1px solid rgb(50, 50, 50);\n"
@@ -351,7 +286,7 @@ class UiMainWindow(object):
         # size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         # size_policy.setHorizontalStretch(0)
         # size_policy.setVerticalStretch(0)
-        # size_policy.setHeightForWidth(self.mod_slot_2_name_button.sizePolicy().hasHeightForWidth())
+        # size_policy.setHeightForWidth(self.mod_slot_2_name_button.size_policy().hasHeightForWidth())
         # self.mod_slot_2_name_button.setSizePolicy(size_policy)
         # self.mod_slot_2_name_button.setMaximumSize(QtCore.QSize(16777215, 16777215))
         # self.mod_slot_2_name_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -391,7 +326,7 @@ class UiMainWindow(object):
         # size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
         # size_policy.setHorizontalStretch(0)
         # size_policy.setVerticalStretch(0)
-        # size_policy.setHeightForWidth(self.mod_slot_3.sizePolicy().hasHeightForWidth())
+        # size_policy.setHeightForWidth(self.mod_slot_3.size_policy().hasHeightForWidth())
         # self.mod_slot_3.setSizePolicy(size_policy)
         # self.mod_slot_3.setStyleSheet("border-radius: 10px;\n"
         #                               "border: 1px solid rgb(50, 50, 50);\n"
@@ -414,7 +349,7 @@ class UiMainWindow(object):
         # size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         # size_policy.setHorizontalStretch(0)
         # size_policy.setVerticalStretch(0)
-        # size_policy.setHeightForWidth(self.mod_slot_3_name_button.sizePolicy().hasHeightForWidth())
+        # size_policy.setHeightForWidth(self.mod_slot_3_name_button.size_policy().hasHeightForWidth())
         # self.mod_slot_3_name_button.setSizePolicy(size_policy)
         # self.mod_slot_3_name_button.setMaximumSize(QtCore.QSize(16777215, 16777215))
         # self.mod_slot_3_name_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -571,56 +506,56 @@ class UiMainWindow(object):
         self.console_buttons_widget_horizontal_layout.setObjectName("console_buttons_widget_horizontal_layout")
 
         self.console_button_1 = QtWidgets.QPushButton(self.console_buttons_widget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.console_button_1.sizePolicy().hasHeightForWidth())
-        self.console_button_1.setSizePolicy(sizePolicy)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.console_button_1.sizePolicy().hasHeightForWidth())
+        self.console_button_1.setSizePolicy(size_policy)
         self.console_button_1.setObjectName("console_button_1")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_1)
 
         self.console_button_2 = QtWidgets.QPushButton(self.console_buttons_widget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.console_button_2.sizePolicy().hasHeightForWidth())
-        self.console_button_2.setSizePolicy(sizePolicy)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.console_button_2.sizePolicy().hasHeightForWidth())
+        self.console_button_2.setSizePolicy(size_policy)
         self.console_button_2.setObjectName("console_button_2")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_2)
 
         self.console_button_3 = QtWidgets.QPushButton(self.console_buttons_widget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.console_button_3.sizePolicy().hasHeightForWidth())
-        self.console_button_3.setSizePolicy(sizePolicy)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.console_button_3.sizePolicy().hasHeightForWidth())
+        self.console_button_3.setSizePolicy(size_policy)
         self.console_button_3.setObjectName("console_button_3")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_3)
 
         self.console_button_4 = QtWidgets.QPushButton(self.console_buttons_widget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.console_button_4.sizePolicy().hasHeightForWidth())
-        self.console_button_4.setSizePolicy(sizePolicy)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.console_button_4.sizePolicy().hasHeightForWidth())
+        self.console_button_4.setSizePolicy(size_policy)
         self.console_button_4.setObjectName("console_button_4")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_4)
 
         self.console_button_5 = QtWidgets.QPushButton(self.console_buttons_widget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.console_button_5.sizePolicy().hasHeightForWidth())
-        self.console_button_5.setSizePolicy(sizePolicy)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.console_button_5.sizePolicy().hasHeightForWidth())
+        self.console_button_5.setSizePolicy(size_policy)
         self.console_button_5.setObjectName("console_button_5")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_5)
 
         self.console_button_6 = QtWidgets.QPushButton(self.console_buttons_widget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.console_button_6.sizePolicy().hasHeightForWidth())
-        self.console_button_6.setSizePolicy(sizePolicy)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.console_button_6.sizePolicy().hasHeightForWidth())
+        self.console_button_6.setSizePolicy(size_policy)
         self.console_button_6.setObjectName("console_button_6")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_6)
 
@@ -682,6 +617,7 @@ class UiMainWindow(object):
         self.browse_button.setMinimumSize(QtCore.QSize(125, 0))
         self.browse_button.setMaximumSize(QtCore.QSize(125, 16777215))
         self.browse_button.setObjectName("browse_button")
+        self.browse_button.clicked.connect(self.open_file_browser)
         self.path_widget_horizontal_layout.addWidget(self.browse_button)
 
         self.settings_widget_vertical_layout.addWidget(self.path_widget)
@@ -807,9 +743,43 @@ class UiMainWindow(object):
         main_window.setCentralWidget(self.main_widget)
 
         self.retranslate_ui(main_window)
-        self.stacked_widget.setCurrentIndex(1)
+        self.stacked_widget.setCurrentIndex(2)
         self.mc_version_select_box.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(main_window)
+
+    def open_file_browser(self):
+        filename = QtWidgets.QFileDialog.getOpenFileName()[0]
+        s.edit_user_mc_path(filename)
+        self.update_ui()
+
+    def update_ui(self):
+
+        # user_mc_path
+        user_mc_path = s.get_user_mc_path()
+        if user_mc_path:
+            self.path_line_edit.setText(str(user_mc_path))
+            self.border_color = self.color_dark_grey
+        else:
+            self.path_line_edit.clear()
+            self.border_color = self.color_red
+
+        stylesheet = "#main_widget {border-radius: 0px; background-color: rgb(50, 50, 50)}"
+        stylesheet += ".QWidget {background-color: rgb(37, 37, 37); border-radius:10px}"
+        stylesheet += ".QPushButton {background-color:rgb(50, 50, 50); transition:background-color; color: white; border-radius: 10px; font: 10pt \"Arial\"}"
+        stylesheet += ".QPushButton:hover {background-color:rgb(60, 60, 60)}"
+        stylesheet += ".QLabel, .QCheckBox {color: white; font: 10pt \"Arial\"}"
+        stylesheet += "#title {font: 75 18pt \"Arial\"}"
+        stylesheet += "#program_version {margin-top: 6px}"
+        stylesheet += ".QComboBox {background-color: rgb(50, 50, 50); color: white; border-radius: 10px; font: 10pt \"Arial\"}"
+        stylesheet += ".QScrollArea {border-radius:10px 10px 0px 0px; background-color: rgb(37, 37, 37)}"
+        stylesheet += "#mods_page, #console_page, #settings_page {background-color: rgb(50, 50, 50)}"
+        stylesheet += ".QPlainTextEdit {background-color: rgb(37, 37, 37); color: white; font: 8pt \"Arial\"; border: 1px solid rgb(50, 50, 50); border-radius: 10px;}"
+        stylesheet += ".Line {color: rgb(50, 50, 50)}"
+        stylesheet += ".QLineEdit {background-color: rgb(50, 50, 50); border-radius: 5px; color: white; border:1px solid " + self.border_color + " }"
+        stylesheet += "#font_size_label {font: 75 12pt \"Arial\"}"
+
+        MainWindow.setStyleSheet(stylesheet)
+
 
     def retranslate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
@@ -869,5 +839,6 @@ if __name__ == "__main__":
     MainWindow = QtWidgets.QMainWindow()
     ui = UiMainWindow()
     ui.setup_ui(MainWindow)
+    ui.update_ui()
     MainWindow.show()
     sys.exit(app.exec_())
