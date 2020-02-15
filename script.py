@@ -106,7 +106,7 @@ def reset_file(file_name):
         else:
             pickle.dump({}, file)
     print('------------------------------------------')
-    print('"' + file_name + '" reseted')
+    print('"' + file_name + '" reset')
     print('------------------------------------------')
 
 
@@ -457,13 +457,13 @@ def update(reset=False):
             if mod_info:
                 update_mod_info(mod_info)
 
-    while True:
-        check_user_settings()
-        clear_mods_list()
-        update_mods_url()
-        if not update_mods():
-            show_mods_list()
-            break
+    # while True:
+    #     check_user_settings()
+    #     clear_mods_list()
+    #     update_mods_url()
+    #     if not update_mods():
+    #         show_mods_list()
+    #         break
 
 
 # update(True)

@@ -13,7 +13,6 @@ class UiMainWindow(object):
         self.color_red = 'rgb(255, 47, 50)'
         self.border_color = self.color_red
 
-
     def setup_ui(self, main_window):
         main_window.setObjectName("main_window")
         main_window.resize(579, 558)
@@ -839,6 +838,8 @@ if __name__ == "__main__":
     MainWindow = QtWidgets.QMainWindow()
     ui = UiMainWindow()
     ui.setup_ui(MainWindow)
+    s.update()
     ui.update_ui()
+
     MainWindow.show()
     sys.exit(app.exec_())
