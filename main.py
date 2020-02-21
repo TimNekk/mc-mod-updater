@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
 import script as s
+import threading
 
 
 # noinspection PyAttributeOutsideInit
@@ -101,6 +102,7 @@ class UiMainWindow(object):
         self.mods_button.setMaximumSize(QtCore.QSize(16777215, 40))
         self.mods_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.mods_button.setObjectName("mods_button")
+        self.mods_button.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
         self.top_widget_horizontal_layout.addWidget(self.mods_button)
 
         self.console_button = QtWidgets.QPushButton(self.top_widget)
@@ -113,6 +115,7 @@ class UiMainWindow(object):
         self.console_button.setMaximumSize(QtCore.QSize(16777215, 40))
         self.console_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.console_button.setObjectName("console_button")
+        self.console_button.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(1))
         self.top_widget_horizontal_layout.addWidget(self.console_button)
 
         self.settings_button = QtWidgets.QPushButton(self.top_widget)
@@ -125,6 +128,7 @@ class UiMainWindow(object):
         self.settings_button.setMaximumSize(QtCore.QSize(16777215, 40))
         self.settings_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.settings_button.setObjectName("settings_button")
+        self.settings_button.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(2))
         self.top_widget_horizontal_layout.addWidget(self.settings_button)
 
         self.main_widget_vertical_layout.addWidget(self.top_widget)
@@ -155,7 +159,7 @@ class UiMainWindow(object):
         self.update_widget.setObjectName("update_widget")
 
         self.update_widget_vertical_layout = QtWidgets.QVBoxLayout(self.update_widget)
-        self.update_widget_vertical_layout.setContentsMargins(0, 0, 0, 0)
+        self.update_widget_vertical_layout.setContentsMargins(6, 0, 6, 0)
         self.update_widget_vertical_layout.setSpacing(0)
         self.update_widget_vertical_layout.setObjectName("update_widget_vertical_layout")
 
@@ -424,9 +428,10 @@ class UiMainWindow(object):
         self.mc_version_select_box.setDuplicatesEnabled(False)
         self.mc_version_select_box.setFrame(True)
         self.mc_version_select_box.setObjectName("mc_version_select_box")
-        # TODO - mc_version
-        self.mc_version_select_box.addItem("")
-        self.mc_version_select_box.addItem("")
+        self.mc_versions = s.get_all_mc_versions()
+        for mc_version in self.mc_versions:
+            self.mc_version_select_box.addItem(mc_version)
+
         self.mods_widget_horizontal_layout.addWidget(self.mc_version_select_box)
 
         spacer_item_5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -437,6 +442,7 @@ class UiMainWindow(object):
         self.refresh_button.setMaximumSize(QtCore.QSize(125, 40))
         self.refresh_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.refresh_button.setObjectName("refresh_button")
+        self.refresh_button.clicked.connect(self.refresh_button_pressed)
         self.mods_widget_horizontal_layout.addWidget(self.refresh_button)
 
         self.update_all_button = QtWidgets.QPushButton(self.mods_widget)
@@ -449,6 +455,7 @@ class UiMainWindow(object):
         self.update_all_button.setMaximumSize(QtCore.QSize(125, 40))
         self.update_all_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.update_all_button.setObjectName("update_all_button")
+        self.update_all_button.hide()
         self.mods_widget_horizontal_layout.addWidget(self.update_all_button)
 
         self.mods_page_vertical_layout.addWidget(self.mods_widget)
@@ -742,7 +749,7 @@ class UiMainWindow(object):
         main_window.setCentralWidget(self.main_widget)
 
         self.retranslate_ui(main_window)
-        self.stacked_widget.setCurrentIndex(2)
+        self.stacked_widget.setCurrentIndex(0)
         self.mc_version_select_box.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(main_window)
 
@@ -779,6 +786,19 @@ class UiMainWindow(object):
 
         MainWindow.setStyleSheet(stylesheet)
 
+    def refresh_button_pressed(self):
+        updating_thread = threading.Thread(target=lambda: s.update(self.mc_version_select_box.currentText()))
+        updating_thread.start()
+
+        while updating_thread.is_alive():
+            managing_thread = threading.Thread(target=self.manage_mods())
+            managing_thread.start()
+
+
+    def manage_mods(self):
+        with open('mods.list', 'rb') as file:
+            mods_list = pickle.load(file)
+
 
     def retranslate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
@@ -808,9 +828,7 @@ class UiMainWindow(object):
         # self.mod_slot_3_delete_button.setText(_translate("main_window", "Delete"))
 
         self.mc_version_label.setText(_translate("main_window", "Your MC version"))
-        self.mc_version_select_box.setCurrentText(_translate("main_window", "1.14"))
-        self.mc_version_select_box.setItemText(0, _translate("main_window", "1.14"))
-        self.mc_version_select_box.setItemText(1, _translate("main_window", "1.12.2"))
+        self.mc_version_select_box.setCurrentText(_translate("main_window", self.mc_versions[0]))
 
         self.console_button_1.setText(_translate("main_window", "Everything"))
         self.console_button_2.setText(_translate("main_window", "Name"))
@@ -838,7 +856,6 @@ if __name__ == "__main__":
     MainWindow = QtWidgets.QMainWindow()
     ui = UiMainWindow()
     ui.setup_ui(MainWindow)
-    s.update()
     ui.update_ui()
 
     MainWindow.show()
