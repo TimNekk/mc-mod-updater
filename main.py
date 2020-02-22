@@ -2,6 +2,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
 import script as s
 import threading
+import os
 
 
 # noinspection PyAttributeOutsideInit
@@ -9,6 +10,7 @@ import threading
 
 class UiMainWindow(object):
     def __init__(self):
+        self.mods = []
         self.color_dark_grey = 'rgb(37, 37, 37);'
         self.color_light_grey = 'rgb(50, 50, 50);'
         self.color_red = 'rgb(255, 47, 50)'
@@ -159,12 +161,12 @@ class UiMainWindow(object):
         self.update_widget.setObjectName("update_widget")
 
         self.update_widget_vertical_layout = QtWidgets.QVBoxLayout(self.update_widget)
-        self.update_widget_vertical_layout.setContentsMargins(6, 0, 6, 0)
+        self.update_widget_vertical_layout.setContentsMargins(9, 9, 9, 9)
         self.update_widget_vertical_layout.setSpacing(0)
         self.update_widget_vertical_layout.setObjectName("update_widget_vertical_layout")
 
         self.scroll_area = QtWidgets.QScrollArea(self.update_widget)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         size_policy.setHorizontalStretch(0)
         size_policy.setVerticalStretch(0)
         size_policy.setHeightForWidth(self.scroll_area.sizePolicy().hasHeightForWidth())
@@ -175,93 +177,102 @@ class UiMainWindow(object):
         self.scroll_area.setLineWidth(0)
         self.scroll_area.setMidLineWidth(0)
         self.scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        self.scroll_area.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustIgnored)
+        self.scroll_area.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow)
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setAlignment(QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        self.scroll_area.setAlignment(QtCore.Qt.AlignLeading | QtCore.Qt.AlignCenter | QtCore.Qt.AlignBottom)
         self.scroll_area.setObjectName("scroll_area")
 
         self.scroll_area_widget_contents = QtWidgets.QWidget()
-        self.scroll_area_widget_contents.setGeometry(QtCore.QRect(0, 0, 549, 138))
+        self.scroll_area_widget_contents.setGeometry(QtCore.QRect(0, 0, 549, 200))
         self.scroll_area_widget_contents.setObjectName("scroll_area_widget_contents")
 
         self.scroll_area_widget_contents_vertical_layout = QtWidgets.QVBoxLayout(self.scroll_area_widget_contents)
         self.scroll_area_widget_contents_vertical_layout.setObjectName("scroll_area_widget_contents_vertical_layout")
 
-        # TODO - Настроить мод слоты
+        self.scroll_area.setWidget(self.scroll_area_widget_contents)
 
-        self.mod_slot_1 = QtWidgets.QFrame(self.scroll_area_widget_contents)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
-        size_policy.setHorizontalStretch(0)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.mod_slot_1.sizePolicy().hasHeightForWidth())
-        self.mod_slot_1.setSizePolicy(size_policy)
-        self.mod_slot_1.setStyleSheet("border-radius: 10px;\n"
-                                      "border: 1px solid rgb(50, 50, 50);\n"
-                                      "border-radius: 7px;")
-        self.mod_slot_1.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.mod_slot_1.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.mod_slot_1.setObjectName("mod_slot_1")
+        self.update_widget_vertical_layout.addWidget(self.scroll_area)
 
-        self.mod_slot_1_horizontal_layout = QtWidgets.QHBoxLayout(self.mod_slot_1)
-        self.mod_slot_1_horizontal_layout.setContentsMargins(7, 7, 7, 7)
-        self.mod_slot_1_horizontal_layout.setSpacing(7)
-        self.mod_slot_1_horizontal_layout.setObjectName("mod_slot_1_horizontal_layout")
+        # spacer_item_4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        # self.update_widget_vertical_layout.addItem(spacer_item_4)
 
-        self.mod_slot_1_count_label = QtWidgets.QLabel(self.mod_slot_1)
-        self.mod_slot_1_count_label.setMinimumSize(QtCore.QSize(20, 20))
-        self.mod_slot_1_count_label.setMaximumSize(QtCore.QSize(20, 20))
-        self.mod_slot_1_count_label.setStyleSheet("background-color: rgb(50, 50, 50);")
-        self.mod_slot_1_count_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.mod_slot_1_count_label.setObjectName("mod_slot_1_count_label")
-        self.mod_slot_1_horizontal_layout.addWidget(self.mod_slot_1_count_label)
+        self.mods_page_vertical_layout.addWidget(self.update_widget)
 
-        self.mod_slot_1_name_button = QtWidgets.QPushButton(self.mod_slot_1)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
-        size_policy.setHorizontalStretch(0)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.mod_slot_1_name_button.sizePolicy().hasHeightForWidth())
-        self.mod_slot_1_name_button.setSizePolicy(size_policy)
-        self.mod_slot_1_name_button.setMaximumSize(QtCore.QSize(16777215, 16777215))
-        self.mod_slot_1_name_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.mod_slot_1_name_button.setStyleSheet("* {\n"
-                                                  "    background-color: none;\n"
-                                                  "    border: none;\n"
-                                                  "    color: white;\n"
-                                                  "}\n"
-                                                  "\n"
-                                                  "*:hover {\n"
-                                                  "    background-color: none;\n"
-                                                  "    color: rgb(165, 165, 165)\n"
-                                                  "}")
-        self.mod_slot_1_name_button.setObjectName("mod_slot_1_name_button")
-        self.mod_slot_1_horizontal_layout.addWidget(self.mod_slot_1_name_button)
+        spacer_item_4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.mods_page_vertical_layout.addItem(spacer_item_4)
 
-        spacer_item_1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.mod_slot_1_horizontal_layout.addItem(spacer_item_1)
-
-        self.mod_slot_1_version_label = QtWidgets.QLabel(self.mod_slot_1)
-        self.mod_slot_1_version_label.setStyleSheet("border: none;")
-        self.mod_slot_1_version_label.setObjectName("mod_slot_1_version_label")
-        self.mod_slot_1_horizontal_layout.addWidget(self.mod_slot_1_version_label)
-
-        self.mod_slot_1_update_button = QtWidgets.QPushButton(self.mod_slot_1)
-        self.mod_slot_1_update_button.setMinimumSize(QtCore.QSize(75, 20))
-        self.mod_slot_1_update_button.setMaximumSize(QtCore.QSize(75, 16777215))
-        self.mod_slot_1_update_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.mod_slot_1_update_button.setObjectName("mod_slot_1_update_button")
-        self.mod_slot_1_horizontal_layout.addWidget(self.mod_slot_1_update_button)
-
-        self.mod_slot_1_delete_button = QtWidgets.QPushButton(self.mod_slot_1)
-        self.mod_slot_1_delete_button.setMinimumSize(QtCore.QSize(75, 20))
-        self.mod_slot_1_delete_button.setMaximumSize(QtCore.QSize(75, 16777215))
-        self.mod_slot_1_delete_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.mod_slot_1_delete_button.setStyleSheet("color: rgb(255, 47, 50)")
-        self.mod_slot_1_delete_button.setObjectName("mod_slot_1_delete_button")
-        self.mod_slot_1_horizontal_layout.addWidget(self.mod_slot_1_delete_button)
-
-        self.scroll_area_widget_contents_vertical_layout.addWidget(self.mod_slot_1)
-
+        # self.mod_slot_1 = QtWidgets.QFrame(self.scroll_area_widget_contents)
+        # size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        # size_policy.setHorizontalStretch(0)
+        # size_policy.setVerticalStretch(0)
+        # size_policy.setHeightForWidth(self.mod_slot_1.sizePolicy().hasHeightForWidth())
+        # self.mod_slot_1.setSizePolicy(size_policy)
+        # self.mod_slot_1.setStyleSheet("border-radius: 10px;\n"
+        #                               "border: 1px solid rgb(50, 50, 50);\n"
+        #                               "border-radius: 7px;")
+        # self.mod_slot_1.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        # self.mod_slot_1.setFrameShadow(QtWidgets.QFrame.Raised)
+        # self.mod_slot_1.setObjectName("mod_slot_1")
         #
+        # self.mod_slot_1_horizontal_layout = QtWidgets.QHBoxLayout(self.mod_slot_1)
+        # self.mod_slot_1_horizontal_layout.setContentsMargins(7, 7, 7, 7)
+        # self.mod_slot_1_horizontal_layout.setSpacing(7)
+        # self.mod_slot_1_horizontal_layout.setObjectName("mod_slot_1_horizontal_layout")
+        #
+        # self.mod_slot_1_count_label = QtWidgets.QLabel(self.mod_slot_1)
+        # self.mod_slot_1_count_label.setMinimumSize(QtCore.QSize(20, 20))
+        # self.mod_slot_1_count_label.setMaximumSize(QtCore.QSize(20, 20))
+        # self.mod_slot_1_count_label.setStyleSheet("background-color: rgb(50, 50, 50);")
+        # self.mod_slot_1_count_label.setAlignment(QtCore.Qt.AlignCenter)
+        # self.mod_slot_1_count_label.setObjectName("mod_slot_1_count_label")
+        # self.mod_slot_1_horizontal_layout.addWidget(self.mod_slot_1_count_label)
+        #
+        # self.mod_slot_1_name_button = QtWidgets.QPushButton(self.mod_slot_1)
+        # size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        # size_policy.setHorizontalStretch(0)
+        # size_policy.setVerticalStretch(0)
+        # size_policy.setHeightForWidth(self.mod_slot_1_name_button.sizePolicy().hasHeightForWidth())
+        # self.mod_slot_1_name_button.setSizePolicy(size_policy)
+        # self.mod_slot_1_name_button.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        # self.mod_slot_1_name_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        # self.mod_slot_1_name_button.setStyleSheet("* {\n"
+        #                                           "    background-color: none;\n"
+        #                                           "    border: none;\n"
+        #                                           "    color: white;\n"
+        #                                           "}\n"
+        #                                           "\n"
+        #                                           "*:hover {\n"
+        #                                           "    background-color: none;\n"
+        #                                           "    color: rgb(165, 165, 165)\n"
+        #                                           "}")
+        # self.mod_slot_1_name_button.setObjectName("mod_slot_1_name_button")
+        # self.mod_slot_1_horizontal_layout.addWidget(self.mod_slot_1_name_button)
+        #
+        # spacer_item_1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        # self.mod_slot_1_horizontal_layout.addItem(spacer_item_1)
+        #
+        # self.mod_slot_1_version_label = QtWidgets.QLabel(self.mod_slot_1)
+        # self.mod_slot_1_version_label.setStyleSheet("border: none;")
+        # self.mod_slot_1_version_label.setObjectName("mod_slot_1_version_label")
+        # self.mod_slot_1_horizontal_layout.addWidget(self.mod_slot_1_version_label)
+        #
+        # self.mod_slot_1_update_button = QtWidgets.QPushButton(self.mod_slot_1)
+        # self.mod_slot_1_update_button.setMinimumSize(QtCore.QSize(75, 20))
+        # self.mod_slot_1_update_button.setMaximumSize(QtCore.QSize(75, 16777215))
+        # self.mod_slot_1_update_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        # self.mod_slot_1_update_button.setObjectName("mod_slot_1_update_button")
+        # self.mod_slot_1_horizontal_layout.addWidget(self.mod_slot_1_update_button)
+        #
+        # self.mod_slot_1_delete_button = QtWidgets.QPushButton(self.mod_slot_1)
+        # self.mod_slot_1_delete_button.setMinimumSize(QtCore.QSize(75, 20))
+        # self.mod_slot_1_delete_button.setMaximumSize(QtCore.QSize(75, 16777215))
+        # self.mod_slot_1_delete_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        # self.mod_slot_1_delete_button.setStyleSheet("color: rgb(255, 47, 50)")
+        # self.mod_slot_1_delete_button.setObjectName("mod_slot_1_delete_button")
+        # self.mod_slot_1_horizontal_layout.addWidget(self.mod_slot_1_delete_button)
+        #
+        # self.scroll_area_widget_contents_vertical_layout.addWidget(self.mod_slot_1)
+
         # self.mod_slot_2 = QtWidgets.QFrame(self.scroll_area_widget_contents)
         # size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
         # size_policy.setHorizontalStretch(0)
@@ -325,6 +336,7 @@ class UiMainWindow(object):
         # self.mod_slot_2_delete_button.setObjectName("mod_slot_2_delete_button")
         # self.horizontalLayout_5.addWidget(self.mod_slot_2_delete_button)
         # self.scroll_area_widget_contents_vertical_layout.addWidget(self.mod_slot_2)
+
         # self.mod_slot_3 = QtWidgets.QFrame(self.scroll_area_widget_contents)
         # size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
         # size_policy.setHorizontalStretch(0)
@@ -389,12 +401,7 @@ class UiMainWindow(object):
         # self.horizontalLayout_7.addWidget(self.mod_slot_3_delete_button)
         # self.scroll_area_widget_contents_vertical_layout.addWidget(self.mod_slot_3)
 
-        self.scroll_area.setWidget(self.scroll_area_widget_contents)
-        self.update_widget_vertical_layout.addWidget(self.scroll_area)
 
-        spacer_item_4 = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.update_widget_vertical_layout.addItem(spacer_item_4)
-        self.mods_page_vertical_layout.addWidget(self.update_widget)
 
         # main_widget -> stacked_widget -> mods_page -> mods_widget
 
@@ -442,7 +449,7 @@ class UiMainWindow(object):
         self.refresh_button.setMaximumSize(QtCore.QSize(125, 40))
         self.refresh_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.refresh_button.setObjectName("refresh_button")
-        self.refresh_button.clicked.connect(self.refresh_button_pressed)
+        self.refresh_button.clicked.connect(self.refresh)
         self.mods_widget_horizontal_layout.addWidget(self.refresh_button)
 
         self.update_all_button = QtWidgets.QPushButton(self.mods_widget)
@@ -786,18 +793,122 @@ class UiMainWindow(object):
 
         MainWindow.setStyleSheet(stylesheet)
 
-    def refresh_button_pressed(self):
-        updating_thread = threading.Thread(target=lambda: s.update(self.mc_version_select_box.currentText()))
-        updating_thread.start()
+        print(1)
+        self.update_widget.resize(QtCore.QSize(2000, 2000))
 
-        while updating_thread.is_alive():
-            managing_thread = threading.Thread(target=self.manage_mods())
-            managing_thread.start()
+    def refresh(self):
+        s.reset_file('mods.list')
+        s.reset_file('user.settings')
+
+        # while True:
+        #     try:
+        #         reset_mods_updated_status()
+        #         break
+        #     except FileNotFoundError:
+        #         print(Fore.RED + 'No "mods.list" found' + Fore.RESET)
+        #         reset_file('mods.list')
 
 
-    def manage_mods(self):
-        with open('mods.list', 'rb') as file:
-            mods_list = pickle.load(file)
+        # self.path_line_edit.text()
+        for file_name in os.listdir(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods'):
+            file_path = os.path.join(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods', file_name)
+
+            if not os.path.isdir(file_path):
+                mod = s.get_mod_info(file_path, file_name)
+
+                print(mod['name'])
+
+                if mod:
+                    # updated_mod = update_mod_info(mod)
+                    # if updated_mod:
+                    #     mod = updated_mod
+
+                    mod = s.update_mod_url(mod, self.mc_version_select_box.currentText())
+                    mod = s.check_if_mod_is_updated(mod, self.mc_version_select_box.currentText())
+                    print()
+
+                    self.mods.append(mod)
+                    self.add_mod_slot(mod)
+
+    def add_mod_slot(self, mod):
+        self.mod_slot = QtWidgets.QFrame(self.scroll_area_widget_contents)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.mod_slot.sizePolicy().hasHeightForWidth())
+        self.mod_slot.setSizePolicy(size_policy)
+        self.mod_slot.setStyleSheet("border-radius: 10px;\n"
+                                      "border: 1px solid rgb(50, 50, 50);\n"
+                                      "border-radius: 7px;")
+        self.mod_slot.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.mod_slot.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.mod_slot.setObjectName("mod_slot_1")
+
+        self.mod_slot_horizontal_layout = QtWidgets.QHBoxLayout(self.mod_slot)
+        self.mod_slot_horizontal_layout.setContentsMargins(7, 7, 7, 7)
+        self.mod_slot_horizontal_layout.setSpacing(7)
+        self.mod_slot_horizontal_layout.setObjectName("mod_slot_1_horizontal_layout")
+
+        self.mod_slot_count_label = QtWidgets.QLabel(self.mod_slot)
+        self.mod_slot_count_label.setMinimumSize(QtCore.QSize(20, 20))
+        self.mod_slot_count_label.setMaximumSize(QtCore.QSize(20, 20))
+        self.mod_slot_count_label.setStyleSheet("background-color: rgb(50, 50, 50);")
+        self.mod_slot_count_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.mod_slot_count_label.setObjectName("mod_slot_1_count_label")
+        self.mod_slot_count_label.setText(str(len(self.mods)))
+        self.mod_slot_horizontal_layout.addWidget(self.mod_slot_count_label)
+
+        self.mod_slot_name_button = QtWidgets.QPushButton(self.mod_slot)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.mod_slot_name_button.sizePolicy().hasHeightForWidth())
+        self.mod_slot_name_button.setSizePolicy(size_policy)
+        self.mod_slot_name_button.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        self.mod_slot_name_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_name_button.setStyleSheet("* {\n"
+                                                  "    background-color: none;\n"
+                                                  "    border: none;\n"
+                                                  "    color: white;\n"
+                                                  "}\n"
+                                                  "\n"
+                                                  "*:hover {\n"
+                                                  "    background-color: none;\n"
+                                                  "    color: rgb(165, 165, 165)\n"
+                                                  "}")
+        self.mod_slot_name_button.setObjectName("mod_slot_1_name_button")
+        self.mod_slot_name_button.setText(mod['name'])
+        self.mod_slot_horizontal_layout.addWidget(self.mod_slot_name_button)
+
+        spacer_item = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.mod_slot_horizontal_layout.addItem(spacer_item)
+
+        self.mod_slot_version_label = QtWidgets.QLabel(self.mod_slot)
+        self.mod_slot_version_label.setStyleSheet("border: none;")
+        self.mod_slot_version_label.setObjectName("mod_slot_1_version_label")
+        self.mod_slot_version_label.setText(mod['version'])
+        self.mod_slot_horizontal_layout.addWidget(self.mod_slot_version_label)
+
+        self.mod_slot_update_button = QtWidgets.QPushButton(self.mod_slot)
+        self.mod_slot_update_button.setMinimumSize(QtCore.QSize(75, 20))
+        self.mod_slot_update_button.setMaximumSize(QtCore.QSize(75, 16777215))
+        self.mod_slot_update_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_update_button.setObjectName("mod_slot_1_update_button")
+        self.mod_slot_update_button.setText("Update")
+        self.mod_slot_horizontal_layout.addWidget(self.mod_slot_update_button)
+
+        self.mod_slot_delete_button = QtWidgets.QPushButton(self.mod_slot)
+        self.mod_slot_delete_button.setMinimumSize(QtCore.QSize(75, 20))
+        self.mod_slot_delete_button.setMaximumSize(QtCore.QSize(75, 16777215))
+        self.mod_slot_delete_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.mod_slot_delete_button.setStyleSheet("color: rgb(255, 47, 50)")
+        self.mod_slot_delete_button.setObjectName("mod_slot_1_delete_button")
+        self.mod_slot_delete_button.setText("Delete")
+        self.mod_slot_horizontal_layout.addWidget(self.mod_slot_delete_button)
+
+        self.scroll_area_widget_contents_vertical_layout.addWidget(self.mod_slot)
+
+        self.update_ui()
 
 
     def retranslate_ui(self, main_window):
@@ -809,11 +920,11 @@ class UiMainWindow(object):
         self.console_button.setText(_translate("main_window", "Console"))
         self.settings_button.setText(_translate("main_window", "Settings"))
 
-        self.mod_slot_1_count_label.setText(_translate("main_window", "1"))
-        self.mod_slot_1_name_button.setText(_translate("main_window", "Immersive Engineering"))
-        self.mod_slot_1_version_label.setText(_translate("main_window", "v123.324.21"))
-        self.mod_slot_1_update_button.setText(_translate("main_window", "Update"))
-        self.mod_slot_1_delete_button.setText(_translate("main_window", "Delete"))
+        # self.mod_slot_1_count_label.setText(_translate("main_window", "1"))
+        # self.mod_slot_1_name_button.setText(_translate("main_window", "Immersive Engineering"))
+        # self.mod_slot_1_version_label.setText(_translate("main_window", "v123.324.21"))
+        # self.mod_slot_1_update_button.setText(_translate("main_window", "Update"))
+        # self.mod_slot_1_delete_button.setText(_translate("main_window", "Delete"))
 
         # self.mod_slot_2_count_label.setText(_translate("main_window", "2"))
         # self.mod_slot_2_name_button.setText(_translate("main_window", "Industrial Craft 2"))
