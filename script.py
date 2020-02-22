@@ -1,3 +1,5 @@
+# noinspection PyBroadException
+
 import zipfile
 import re
 import os
@@ -11,6 +13,7 @@ import requests
 import shutil
 
 init()
+
 
 mods_dir = 'C:\\Users\\Tim PC\\AppData\\Roaming\\.minecraft\\mods'
 mods_exception = ['VoxelMap']
@@ -41,14 +44,14 @@ def get_mod_info(file_path, file_name):
 
         try:
             mod['version'] = re.findall(r'[\w.-]+',
-                                             re.findall(r'\"version.{4}[\w.-]+', file_data)[0][::-1])[0][::-1]
+                                        re.findall(r'\"version.{4}[\w.-]+', file_data)[0][::-1])[0][::-1]
         except IndexError:
             print(Fore.RED + mod['name'] + ' - no "Version" found' + Fore.RESET)
             return False
 
         try:
             mod['mc_version'] = re.findall(r'[\"][\w].+',
-                                                re.findall(r'mcversion.{4}[\w.-]+', file_data)[0])[0][1::]
+                                           re.findall(r'mcversion.{4}[\w.-]+', file_data)[0])[0][1::]
         except IndexError:
             pass
 
@@ -228,167 +231,154 @@ def clear_mods_list():
                       + Fore.RESET)
 
 
-def update_mods_url(user_mc_version, reset=False):
-    print(Fore.BLUE + 'Mods url searching...')
-    with open('mods.list', 'rb') as file:
-        mods_list = pickle.load(file)
+def update_mods_url(mod, user_mc_version, reset=False):
+    print(Fore.BLUE + 'Mod url searching...')
 
-    for mod in mods_list:
-        if not mod['url'] or reset:
-            try:
-                url = get_mod_url(mod['name'], user_mc_version)
-                if url:
-                    mod['url'] = url
-                else:
-                    mod['url'] = 'url not found'
-                    print(Fore.RED +
-                          '{0} ({1}) url not found!\n'.format(mod['name'], mod['version'])
-                          + Fore.RESET)
-            except error.HTTPError:
-                print(Fore.RED + 'HTTP Error 429: Too Many Requests\n' + Fore.RESET)
-                return False
+    if not mod['url'] or reset:
+        try:
+            url = get_mod_url(mod['name'], user_mc_version)
+            if url:
+                mod['url'] = url
+            else:
+                mod['url'] = False
+                print(Fore.RED +
+                      '{0} ({1}) url not found!\n'.format(mod['name'], mod['version'])
+                      + Fore.RESET)
+        except error.HTTPError:
+            print(Fore.RED + 'HTTP Error 429: Too Many Requests\n' + Fore.RESET)
+            return False
 
-            with open('mods.list', 'wb') as file:
-                pickle.dump(mods_list, file)
-            print(Fore.GREEN +
-                  '{0} ({1}) url added:\n{2}\n'.format(mod['name'], mod['version'], mod['url'])
-                  + Fore.RESET)
+        print(Fore.GREEN +
+              '{0} ({1}) url added:\n{2}\n'.format(mod['name'], mod['version'], mod['url'])
+              + Fore.RESET)
+
+        return mod
 
 
-def update_mods(user_mc_version, save_old_mods=True):
+def update_mods(mod, user_mc_version, save_old_mods=True):
     something_updated = False
 
-    print(Fore.BLUE + 'Mods updating...\n')
+    print(Fore.BLUE + 'Mod updating...\n')
 
     scraper = cfscrape.create_scraper()
 
-    with open('mods.list', 'rb') as file:
-        mods_list = pickle.load(file)
+    try:
+        r = scraper.get(mod['url'])
+    except:
+        continue
 
-    skip_mods = 0
+    soup = BS(r.content, 'html.parser')
 
-    for mod in mods_list:
-        if skip_mods != 0:
-            skip_mods -= 1
-            continue
+    mod_versions = soup.select('.listing-container.listing-container-table:not(.custom-formatting) '
+                               'table tbody tr')
 
+    try:
+        for row in mod_versions:
+            mc_version_container = row.select('.listing-container.listing-container-table:'
+                                              'not(.custom-formatting) table tbody tr td')[4]
+
+            mc_version = mc_version_container.select('.mr-2')[0].text
+            mc_version = re.findall(r'[\w.]+', mc_version)[0]
+
+            if mc_version == user_mc_version:
+                top_row = row
+                raise Exception()
+
+            elif mc_version == 'Forge':
+                version_container = row.select('.listing-container.listing-container-table:'
+                                               'not(.custom-formatting) table tbody tr td')[1]
+
+                version = version_container.select('a')[0]
+                forge_url = 'https://www.curseforge.com/' + version.get('href')
+                r = scraper.get(forge_url)
+
+                soup = BS(r.content, 'html.parser')
+                container = soup.select('.border-gray--100')[1]
+                mc_versions = container.select('.px-1')
+
+                for mc_version in mc_versions:
+                    mc_version = re.findall(r'[\w. ]+', mc_version.text)[0]
+                    if mc_version == user_mc_version:
+                        top_row = row
+                        raise Exception()
+
+    except:
+        pass
+    version_container = top_row.select('.listing-container.listing-container-table:'
+                                       'not(.custom-formatting) table tbody tr td')[1]
+
+    version_text = version_container.select('a')[0].text
+    if re.findall(r'[\d.]+', mod['version'])[0] in user_mc_version:
         try:
-            r = scraper.get(mod['url'])
-        except:
-            continue
-
-        soup = BS(r.content, 'html.parser')
-
-        mod_versions = soup.select('.listing-container.listing-container-table:not(.custom-formatting) '
-                                   'table tbody tr')
-
-        try:
-            for row in mod_versions:
-                mc_version_container = row.select('.listing-container.listing-container-table:'
-                                                  'not(.custom-formatting) table tbody tr td')[4]
-
-                mc_version = mc_version_container.select('.mr-2')[0].text
-                mc_version = re.findall(r'[\w.]+', mc_version)[0]
-
-                if mc_version == user_mc_version:
-                    top_row = row
-                    raise Exception()
-
-                elif mc_version == 'Forge':
-                    version_container = row.select('.listing-container.listing-container-table:'
-                                                   'not(.custom-formatting) table tbody tr td')[1]
-
-                    version = version_container.select('a')[0]
-                    forge_url = 'https://www.curseforge.com/' + version.get('href')
-                    r = scraper.get(forge_url)
-
-                    soup = BS(r.content, 'html.parser')
-                    container = soup.select('.border-gray--100')[1]
-                    mc_versions = container.select('.px-1')
-
-                    for mc_version in mc_versions:
-                        mc_version = re.findall(r'[\w. ]+', mc_version.text)[0]
-                        if mc_version == user_mc_version:
-                            top_row = row
-                            raise Exception()
-
-        except:
-            pass
-        version_container = top_row.select('.listing-container.listing-container-table:'
-                                           'not(.custom-formatting) table tbody tr td')[1]
-
-        version_text = version_container.select('a')[0].text
-        if re.findall(r'[\d.]+', mod['version'])[0] in user_mc_version:
-            try:
-                mod['version'] = re.findall(r'[\d.]+', mod['version'])[1]
-            except IndexError:
-                mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
-        else:
+            mod['version'] = re.findall(r'[\d.]+', mod['version'])[1]
+        except IndexError:
             mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
+    else:
+        mod['version'] = re.findall(r'[\d.]+', mod['version'])[0]
 
-        if mod['version'] in version_text:
-            print(Fore.GREEN +
-                  '{0} ({1}) is up to date'.format(mod['name'], mod['version'])
-                  + Fore.RESET)
-        else:
-            mod['version'] = re.findall(r'[\d]+', mod['version'])
-            mod['version'] = ''.join(mod['version'])
+    if mod['version'] in version_text:
+        print(Fore.GREEN +
+              '{0} ({1}) is up to date'.format(mod['name'], mod['version'])
+              + Fore.RESET)
+    else:
+        mod['version'] = re.findall(r'[\d]+', mod['version'])
+        mod['version'] = ''.join(mod['version'])
 
-            edit_version = re.findall(r'[\d.]+', version_text)
-            for version in edit_version:
-                if user_mc_version in version or version == '.':
-                    continue
+        edit_version = re.findall(r'[\d.]+', version_text)
+        for version in edit_version:
+            if user_mc_version in version or version == '.':
+                continue
 
-                if version[-1] == '.':
-                    version = version[:-1]
+            if version[-1] == '.':
+                version = version[:-1]
 
-                version = re.findall(r'[\d]+', version)
-                version = ''.join(version)
+            version = re.findall(r'[\d]+', version)
+            version = ''.join(version)
 
-                break
+            break
 
-            if int(version) > int(mod['version']):
-                something_updated = True
+        if int(version) > int(mod['version']):
+            something_updated = True
 
-                download_container = top_row.select('.listing-container.listing-container-table:'
-                                                   'not(.custom-formatting) table tbody tr td')[6]
+            # download_container = top_row.select('.listing-container.listing-container-table:'
+            #                                     'not(.custom-formatting) table tbody tr td')[6]
 
-                download_link = version_container.select('a')[0].get('href')
-                file_id = re.findall(r'files\/[\d]+', download_link)[0]
-                file_id = re.findall(r'[\d]+', file_id)[0]
+            download_link = version_container.select('a')[0].get('href')
+            file_id = re.findall(r'files/[\d]+', download_link)[0]
+            file_id = re.findall(r'[\d]+', file_id)[0]
 
-                link_start = re.findall(r'.+files', download_link)[0][:-5]
+            link_start = re.findall(r'.+files', download_link)[0][:-5]
 
-                download_link = 'https://www.curseforge.com' + link_start + 'download/' + file_id + '/file'
+            download_link = 'https://www.curseforge.com' + link_start + 'download/' + file_id + '/file'
 
-                mod_file = scraper.get(download_link)
+            mod_file = scraper.get(download_link)
 
-                if not re.findall(r'.jar', version_text):
-                    version_text += '.jar'
+            if not re.findall(r'.jar', version_text):
+                version_text += '.jar'
 
-                with open(version_text, 'wb') as file:
-                    file.write(mod_file.content)
+            with open(version_text, 'wb') as file:
+                file.write(mod_file.content)
 
-                if not os.path.exists(os.path.join(mods_dir, version_text)):
-                    shutil.move(version_text, mods_dir)
+            if not os.path.exists(os.path.join(mods_dir, version_text)):
+                shutil.move(version_text, mods_dir)
 
-                if save_old_mods:
-                    if not os.path.isdir(mods_dir + '\\' + 'Old mods'):
-                        os.mkdir(mods_dir + '\\' + 'Old mods')
-                    if os.path.exists(mods_dir + '\\' + 'Old mods' + '\\' + mod['file_name']):
-                        os.remove(mods_dir + '\\' + 'Old mods' + '\\' + mod['file_name'])
-                    shutil.move(mods_dir + '\\' + mod['file_name'], mods_dir + '\\' + 'Old mods')
-                else:
-                    os.remove(mods_dir + '\\' + mod['file_name'])
+            if save_old_mods:
+                if not os.path.isdir(mods_dir + '\\' + 'Old mods'):
+                    os.mkdir(mods_dir + '\\' + 'Old mods')
+                if os.path.exists(mods_dir + '\\' + 'Old mods' + '\\' + mod['file_name']):
+                    os.remove(mods_dir + '\\' + 'Old mods' + '\\' + mod['file_name'])
+                shutil.move(mods_dir + '\\' + mod['file_name'], mods_dir + '\\' + 'Old mods')
+            else:
+                os.remove(mods_dir + '\\' + mod['file_name'])
 
-                mods_list.remove(mod)
+            mods_list.remove(mod)
 
-                with open('mods.list', 'wb') as file:
-                    pickle.dump(mods_list, file)
+            with open('mods.list', 'wb') as file:
+                pickle.dump(mods_list, file)
 
-            print(Fore.RED +
-                  '{0} ({1}) -> ({2})'.format(mod['name'], mod['version'], version)
-                  + Fore.RESET)
+        print(Fore.RED +
+              '{0} ({1}) -> ({2})'.format(mod['name'], mod['version'], version)
+              + Fore.RESET)
     return something_updated
 
 
@@ -447,12 +437,12 @@ def update(user_mc_version, reset=False):
 
             if mod:
                 mod = update_mod_info(mod)
-                update_mods_url(user_mc_version)
+                mod = update_mods_url(mod, user_mc_version)
+                mod = update_mods(mod, user_mc_version)
 
     while True:
 
-
-        if not update_mods(user_mc_version):
+        if not :
             show_mods_list()
             break
     clear_mods_list()
