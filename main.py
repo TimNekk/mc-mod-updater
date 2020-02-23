@@ -1010,7 +1010,7 @@ class UiMainWindow(object):
             self.scroll_area_widget_contents_vertical_layout.insertWidget(slot_index, mod_slot)
 
     def update_mod(self, mod, mod_slot, slot_index):
-        # s.update_mod(mod=mod,
+        # s.update_mod(mod=mod, 
         #              mods_dir=r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods',
         #              save_old_mod=self.save_check_box.isChecked())
 
