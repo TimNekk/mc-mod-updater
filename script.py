@@ -352,6 +352,16 @@ def check_if_mod_is_updated(mod, user_mc_version):
             mod['download_link'] = 'https://www.curseforge.com' + link_start + 'download/' + file_id + '/file'
             mod['new_version_text'] = new_version_text
 
+            edit_version = re.findall(r'[\d.]+', mod['new_version_text'])
+            for new_version in edit_version:
+                if mod['new_version_text'] in new_version or new_version == '.':
+                    continue
+
+                if new_version[-1] == '.':
+                    new_version = new_version[:-1]
+
+            mod['new_version'] = new_version
+
             print(Fore.RED +
                   'Mod can be updated ({0}) -> ({1})'.format(old_mod_version, new_version)
                   + Fore.RESET)
@@ -361,13 +371,6 @@ def check_if_mod_is_updated(mod, user_mc_version):
 
 def update_mod(mod, mods_dir, save_old_mod):
     if mod['download_link']:
-        edit_version = re.findall(r'[\d.]+', mod['new_version_text'])
-        for new_version in edit_version:
-            if mod['new_version_text'] in new_version or new_version == '.':
-                continue
-
-            if new_version[-1] == '.':
-                new_version = new_version[:-1]
 
         scraper = cfscrape.create_scraper()
 
@@ -395,7 +398,7 @@ def update_mod(mod, mods_dir, save_old_mod):
             os.remove(mods_dir + '\\' + mod['file_name'])
 
         print(Fore.GREEN +
-              '{0} updated ({1}) -> ({2})'.format(mod['name'], mod['version'], new_version)
+              '{0} updated ({1}) -> ({2})'.format(mod['name'], mod['version'], mod['new_version'])
               + Fore.RESET)
 
     else:
@@ -435,6 +438,10 @@ def get_all_mc_versions():
                 versions.append(title.text)
                 if title.text == '1.0.0':
                     return versions
+
+
+def delete_mod(mod, mods_dir):
+    os.remove(os.path.join(mods_dir, mod['file_name']))
 
 
 def refresh(user_mc_version, mods_dir, reset=True):
