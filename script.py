@@ -151,7 +151,6 @@ def get_mod_url(mod_name, user_mc_version):
     urls = transform_files_urls(google('curseforge.com ' + mod_name))
 
     scraper = cfscrape.create_scraper()
-
     for _ in range(0, 2):
         for url in urls:
             r = scraper.get(url)
@@ -192,48 +191,13 @@ def get_mod_url(mod_name, user_mc_version):
     return False
 
 
-# def reset_mods_updated_status():
-#     with open('mods.list', 'rb') as file:
-#         mods_list = pickle.load(file)
-#
-#     for mod in mods_list:
-#         mod['updated'] = False
-#
-#     with open('mods.list', 'wb') as file:
-#         pickle.dump(mods_list, file)
-#
-#     print(Fore.BLUE + "\nAll mods' updated statuses were reset\n" + Fore.RESET)
-
-
-# def clear_mods_list():
-#     print(Fore.BLUE + '\nClearing mods list...\n' + Fore.RESET)
-#
-#     clearing_done = False
-#     while not clearing_done:
-#         clearing_done = True
-#
-#         with open('mods.list', 'rb') as file:
-#             mods_list = pickle.load(file)
-#
-#         for mod_listed in mods_list:
-#             if not mod_listed['updated']:
-#                 mods_list.remove(mod_listed)
-#
-#                 with open('mods.list', 'wb') as file:
-#                     pickle.dump(mods_list, file)
-#                 clearing_done = False
-#
-#                 print(Fore.RED +
-#                       '{0} ({1}) was removed from "mods.list"'.format(mod_listed['name'], mod_listed['version'])
-#                       + Fore.RESET)
-
-
 def update_mod_url(mod, user_mc_version):
     # print(Fore.BLUE + 'Mod url searching...')
 
     if not mod['url']:
         try:
             url = get_mod_url(mod['name'], user_mc_version)
+
             if url:
                 mod['url'] = url
             else:
@@ -444,43 +408,43 @@ def delete_mod(mod, mods_dir):
     os.remove(os.path.join(mods_dir, mod['file_name']))
 
 
-def refresh(user_mc_version, mods_dir, reset=True):
-    if reset:
-        reset_file('mods.list')
-        reset_file('user.settings')
-
-    # while True:
-    #     try:
-    #         reset_mods_updated_status()
-    #         break
-    #     except FileNotFoundError:
-    #         print(Fore.RED + 'No "mods.list" found' + Fore.RESET)
-    #         reset_file('mods.list')
-
-    for file_name in os.listdir(mods_dir):
-        file_path = os.path.join(mods_dir, file_name)
-
-        if not os.path.isdir(file_path):
-            mod = get_mod_info(file_path, file_name)
-
-            print(mod['name'])
-
-            if mod:
-                # updated_mod = update_mod_info(mod)
-                # if updated_mod:
-                #     mod = updated_mod
-
-                mod = update_mod_url(mod, user_mc_version)
-                mod = check_if_mod_is_updated(mod, user_mc_version)
-                print()
-
-                with open('mods.list', 'rb') as file:
-                    mods_list = pickle.load(file)
-
-                mods_list.append(mod)
-
-                with open('mods.list', 'wb') as file:
-                    pickle.dump(mods_list, file)
+# def refresh(user_mc_version, mods_dir, reset=True):
+#     if reset:
+#         reset_file('mods.list')
+#         reset_file('user.settings')
+#
+#     # while True:
+#     #     try:
+#     #         reset_mods_updated_status()
+#     #         break
+#     #     except FileNotFoundError:
+#     #         print(Fore.RED + 'No "mods.list" found' + Fore.RESET)
+#     #         reset_file('mods.list')
+#
+#     for file_name in os.listdir(mods_dir):
+#         file_path = os.path.join(mods_dir, file_name)
+#
+#         if not os.path.isdir(file_path):
+#             mod = get_mod_info(file_path, file_name)
+#
+#             print(mod['name'])
+#
+#             if mod:
+#                 # updated_mod = update_mod_info(mod)
+#                 # if updated_mod:
+#                 #     mod = updated_mod
+#
+#                 mod = update_mod_url(mod, user_mc_version)
+#                 mod = check_if_mod_is_updated(mod, user_mc_version)
+#                 print()
+#
+#                 with open('mods.list', 'rb') as file:
+#                     mods_list = pickle.load(file)
+#
+#                 mods_list.append(mod)
+#
+#                 with open('mods.list', 'wb') as file:
+#                     pickle.dump(mods_list, file)
 
     # while True:
     #
