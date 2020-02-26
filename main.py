@@ -591,15 +591,19 @@ class UiMainWindow(object):
         MainWindow.setStyleSheet(stylesheet)
 
     def refresh_button_pressed(self):
-        refresh_thread = threading.Thread(target=lambda: self.refresh(refresh_thread))
-        refresh_thread.start()
+        # TODO - Решить проблема с threading
+        # refresh_thread = threading.Thread(target=self.refresh)
+        # refresh_thread.start()
+        self.refresh()
 
-    def refresh(self, thread, mod=False):
+    def refresh(self, mod=False):
         self.refresh_button.hide()
-        self.test = False
-        self.mods = []
+        test = False
 
-        if self.test:
+        # ---------------------------------------------------------------
+        # Test
+        # ---------------------------------------------------------------
+        if test:
             mods = [{'name': 'Chisel', 'file_name': 'Chisel-MC1.12-0.1.0.22.jar',
                      'url': 'https://www.curseforge.com/minecraft/mc-mods/chisel/files/all', 'version': '0.1.0.22',
                      'mc_version': '1.12',
@@ -616,63 +620,91 @@ class UiMainWindow(object):
                 mod['mod_slot'] = self.create_mod_slot(mod)
                 self.mods.append(mod)
                 self.update_scroll_area()
-                print()
+        # ---------------------------------------------------------------
+        # Test
+        # ---------------------------------------------------------------
 
-        else:
+        elif not test:
+            files = []
+
+            # Если нужно обновить конкретный мод
             if mod:
-                # s.get_mod_info(file_path, file_name)
-
-                if mod:
-                    print(mod['name'])
-                    mod = s.update_mod_url(mod, self.mc_version_select_box.currentText())
-                    mod = s.check_if_mod_is_updated(mod, self.mc_version_select_box.currentText())
-
-                    mod['mod_slot'] = self.create_mod_slot(mod)
-                    self.mods.append(mod)
-                    self.update_scroll_area()
-                    print()
+                file_name = mod['new_version_text']
+                file_path = os.path.join(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods', file_name)
+                files.append([file_name, file_path])
             else:
-                # s.reset_file('user.settings')
-
+                self.mods = []
+                # Проход через все файлы в попке mods
                 for file_name in os.listdir(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods'):
                     file_path = os.path.join(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods', file_name)
-                    print(file_name)
-                    print(file_path)
+                    files.append([file_name, file_path])
 
-                    if not os.path.isdir(file_path):
-                        mod = s.get_mod_info(file_path, file_name)
+            for file in files:
+                # Это файл, а не папка?
+                if not os.path.isdir(file[1]):
+                    mod = s.get_mod_info(file[1], file[0])
 
-                        if mod:
-                            print(mod)
-                            mod = s.update_mod_url(mod, self.mc_version_select_box.currentText())
-                            if not mod['url']:
-                                continue
+                    # Достаточно ли информации чтобы работать с модом
+                    if mod:
+                        print(mod['name'])
+                        mod = s.update_mod_url(mod, self.mc_version_select_box.currentText())
 
-                            mod = s.check_if_mod_is_updated(mod, self.mc_version_select_box.currentText())
+                        # Нашли ли ссылку на этот мод
+                        if not mod['url']:
+                            continue
 
-                            mod['mod_slot'] = self.create_mod_slot(mod)
-                            self.mods.append(mod)
-                            self.update_scroll_area()
-                            print()
+                        mod = s.check_if_mod_is_updated(mod, self.mc_version_select_box.currentText())
+                        # Мод прошел все проверки и обработки
 
-            self.refresh_button.show()
-            if self.mods:
-                self.update_all_button.show()
-            print('\n\nRefreshing is done!\n\n')
+                        # Добавление мода в интерфейс
+                        mod['mod_slot'] = self.create_mod_slot(mod)
+                        self.mods.append(mod)
+                        self.update_scroll_area()
+                        print()
+
+        self.refresh_button.show()
+        if self.mods:
+            self.update_all_button.show()
+        print('\nRefreshing is done!\n')
+
+    def update_mod(self, mod):
+        mod = s.update_mod(mod=mod,
+                           mods_dir=r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods',
+                           save_old_mod=self.save_check_box.isChecked())
+
+        self.delete_mod(mod)
+
+        # TODO - Сделать добавление в тот же слот
+        # Нужно использовать mod['mod_slot'].children() и добавить параметр в refresh()
+        self.refresh(mod)
 
     def update_scroll_area(self):
         self.clear_scroll_area()
 
         for i, mod in enumerate(self.mods, 1):
-            mod['mod_slot'].children()[1].setText(str(i))
-            self.scroll_area_widget_contents_vertical_layout.addWidget(mod['mod_slot'])
+            mod['mod_slot'].children()[1].setText(str(i))  # Установка нумерации
+            self.scroll_area_widget_contents_vertical_layout.addWidget(mod['mod_slot'])  # Добавление слотов в виджет
+        else:
+            self.update_all_button.hide()
 
         # Добавление спейсера
-        spacer_item_4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum,
-                                              QtWidgets.QSizePolicy.Expanding)
+        spacer_item_4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.scroll_area_widget_contents_vertical_layout.addItem(spacer_item_4)
 
+    def clear_scroll_area(self):
+        # Удаление всех слотов
+        while self.scroll_area_widget_contents_vertical_layout.count():
+            child = self.scroll_area_widget_contents_vertical_layout.takeAt(0)
+            if child.widget():
+                child.widget().setParent(None)
+
+    def delete_mod(self, mod):
+        self.mods.remove(mod)  # Удаление из self.mods
+        mod['mod_slot'].setParent(None)  # Удаление слота
+        self.update_scroll_area()  # Изменение нумерации слотов
+
     def create_mod_slot(self, mod):
+        # Создание слота
         mod_slot = QtWidgets.QFrame(self.scroll_area_widget_contents)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
         size_policy.setHorizontalStretch(0)
@@ -684,13 +716,14 @@ class UiMainWindow(object):
                                "border-radius: 7px;")
         mod_slot.setFrameShape(QtWidgets.QFrame.StyledPanel)
         mod_slot.setFrameShadow(QtWidgets.QFrame.Raised)
-        mod_slot.setObjectName("mod_slot_1")
+        mod_slot.setObjectName("mod_slot")
 
         mod_slot_horizontal_layout = QtWidgets.QHBoxLayout(mod_slot)
         mod_slot_horizontal_layout.setContentsMargins(7, 7, 7, 7)
         mod_slot_horizontal_layout.setSpacing(7)
         mod_slot_horizontal_layout.setObjectName("mod_slot_1_horizontal_layout")
 
+        # Добавление "Count" label
         mod_slot_count_label = QtWidgets.QLabel(mod_slot)
         mod_slot_count_label.setMinimumSize(QtCore.QSize(20, 20))
         mod_slot_count_label.setMaximumSize(QtCore.QSize(20, 20))
@@ -700,6 +733,7 @@ class UiMainWindow(object):
         mod_slot_count_label.setText('#')
         mod_slot_horizontal_layout.addWidget(mod_slot_count_label)
 
+        # Добавление "Name" button
         mod_slot_name_button = QtWidgets.QPushButton(mod_slot)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         size_policy.setHorizontalStretch(0)
@@ -719,18 +753,20 @@ class UiMainWindow(object):
                                            "    color: rgb(165, 165, 165)\n"
                                            "}")
         mod_slot_name_button.setObjectName("mod_slot_1_name_button")
-        mod_slot_name_button.setText(mod['name'])
+        mod_slot_name_button.setText(mod['name'])  # Присвиевание имени
         mod_slot_horizontal_layout.addWidget(mod_slot_name_button)
 
         spacer_item = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         mod_slot_horizontal_layout.addItem(spacer_item)
 
+        # Добавление "Version" label
         mod_slot_version_label = QtWidgets.QLabel(mod_slot)
         mod_slot_version_label.setStyleSheet("border: none;")
         mod_slot_version_label.setObjectName("mod_slot_1_version_label")
-        mod_slot_version_label.setText(mod['version'])
+        mod_slot_version_label.setText(mod['version'])  # Присвиевание версии
         mod_slot_horizontal_layout.addWidget(mod_slot_version_label)
 
+        # Добавление "Update" button
         if mod['download_link']:
             mod_slot_version_label.setText('{0} -> {1}'.format(mod['version'], mod['new_version']))
 
@@ -740,9 +776,11 @@ class UiMainWindow(object):
             mod_slot_update_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
             mod_slot_update_button.setObjectName("mod_slot_1_update_button")
             mod_slot_update_button.setText("Update")
-            mod_slot_update_button.clicked.connect(lambda: self.update_mod(mod))
+
+            mod_slot_update_button.clicked.connect(lambda: self.update_mod(mod))  # Подключение кнопки к функции
             mod_slot_horizontal_layout.addWidget(mod_slot_update_button)
 
+        # Добавление "Delete" button
         mod_slot_delete_button = QtWidgets.QPushButton(mod_slot)
         mod_slot_delete_button.setMinimumSize(QtCore.QSize(75, 20))
         mod_slot_delete_button.setMaximumSize(QtCore.QSize(75, 16777215))
@@ -750,41 +788,10 @@ class UiMainWindow(object):
         mod_slot_delete_button.setStyleSheet("color: rgb(255, 47, 50)")
         mod_slot_delete_button.setObjectName("mod_slot_1_delete_button")
         mod_slot_delete_button.setText("Delete")
-        mod_slot_delete_button.clicked.connect(lambda: self.delete_mod(mod))
+        mod_slot_delete_button.clicked.connect(lambda: self.delete_mod(mod))  # Подключение кнопки к функции
         mod_slot_horizontal_layout.addWidget(mod_slot_delete_button)
 
         return mod_slot
-
-    def update_mod(self, mod):
-        # TODO - доделать
-        s.update_mod(mod=mod,
-                     mods_dir=r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods',
-                     save_old_mod=self.save_check_box.isChecked())
-
-        self.delete_mod(mod)
-        self.add_mod_slot(mod, slot_index)
-
-    def clear_scroll_area(self):
-        # Удаление всех слотов
-        while self.scroll_area_widget_contents_vertical_layout.count():
-            child = self.scroll_area_widget_contents_vertical_layout.takeAt(0)
-            if child.widget():
-                child.widget().setParent(None)
-
-    def delete_mod(self, mod):
-        self.mods.remove(mod)  # Удаление из self.mods
-
-        mod['mod_slot'].setParent(None)  # Удаление слота
-
-        self.update_scroll_area()  # Изменение нумерации слотов
-
-    def updated_mod_slots_index(self):
-        i = 1
-        print(self.scroll_area_widget_contents.children())
-        for child in self.scroll_area_widget_contents.children():
-            if child.isWidgetType():
-                child.children()[1].setText(str(i))
-                i += 1
 
     def retranslate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
