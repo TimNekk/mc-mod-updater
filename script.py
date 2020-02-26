@@ -338,7 +338,9 @@ def update_mod(mod, mods_dir, save_old_mod):
 
         scraper = cfscrape.create_scraper()
 
-        mod_file = scraper.get(mod['download_link'])
+        mod_file = False
+        while not mod_file:
+            mod_file = scraper.get(mod['download_link'])
 
         if not re.findall(r'.jar', mod['new_version_text']):
             mod['new_version_text'] += '.jar'
@@ -368,6 +370,8 @@ def update_mod(mod, mods_dir, save_old_mod):
     else:
         print(Fore.RED + '{0} is already updated!'.format(mod['name']) + Fore.RESET)
 
+    return mod
+
 
 def edit_user_mc_path(path):
     with open('user.settings', 'rb') as file:
@@ -382,7 +386,6 @@ def edit_user_mc_path(path):
 def get_user_mc_path():
     with open('user.settings', 'rb') as file:
         try:
-            print()
             return pickle.load(file)['mc_path']
         except:
             return False
