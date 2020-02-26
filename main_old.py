@@ -932,7 +932,7 @@ class UiMainWindow(object):
                                "border-radius: 7px;")
         mod_slot.setFrameShape(QtWidgets.QFrame.StyledPanel)
         mod_slot.setFrameShadow(QtWidgets.QFrame.Raised)
-        mod_slot.setObjectName("mod_slot_1")
+        mod_slot.setObjectName("mod_slot")
 
         mod_slot_horizontal_layout = QtWidgets.QHBoxLayout(mod_slot)
         mod_slot_horizontal_layout.setContentsMargins(7, 7, 7, 7)
@@ -1002,6 +1002,8 @@ class UiMainWindow(object):
         mod_slot_delete_button.clicked.connect(lambda: self.delete_mod(mod, mod_slot))
 
         mod_slot_horizontal_layout.addWidget(mod_slot_delete_button)
+
+        print(type(mod_slot))
 
         if slot_index == 999999999999999999999:
             self.scroll_area_widget_contents_vertical_layout.insertWidget(len(self.mods) - 1, mod_slot)
