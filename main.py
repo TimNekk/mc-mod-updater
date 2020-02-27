@@ -3,7 +3,9 @@ import sys
 import script as s
 import threading
 import os
-
+import data
+from time import sleep
+import random
 
 # noinspection PyAttributeOutsideInit
 
@@ -286,19 +288,19 @@ class UiMainWindow(object):
         self.console_widget_vertical_layout.setSpacing(9)
         self.console_widget_vertical_layout.setObjectName("console_widget_vertical_layout")
 
-        self.plain_text_edit = QtWidgets.QPlainTextEdit(self.console_widget)
+        self.console_text_edit = QtWidgets.QPlainTextEdit(self.console_widget)
         font = QtGui.QFont()
         font.setFamily("Arial")
         font.setPointSize(8)
         font.setBold(False)
         font.setItalic(False)
         font.setWeight(50)
-        self.plain_text_edit.setFont(font)
-        self.plain_text_edit.setFrameShape(QtWidgets.QFrame.NoFrame)
-        self.plain_text_edit.setFrameShadow(QtWidgets.QFrame.Plain)
-        self.plain_text_edit.setReadOnly(True)
-        self.plain_text_edit.setObjectName("plain_text_edit")
-        self.console_widget_vertical_layout.addWidget(self.plain_text_edit)
+        self.console_text_edit.setFont(font)
+        self.console_text_edit.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.console_text_edit.setFrameShadow(QtWidgets.QFrame.Plain)
+        self.console_text_edit.setReadOnly(True)
+        self.console_text_edit.setObjectName("plain_text_edit")
+        self.console_widget_vertical_layout.addWidget(self.console_text_edit)
 
         self.label = QtWidgets.QLabel(self.console_widget)
         self.label.setObjectName("label")
@@ -554,12 +556,18 @@ class UiMainWindow(object):
 
         self.retranslate_ui(main_window)
         self.stacked_widget.setCurrentIndex(0)
-        self.mc_version_select_box.setCurrentIndex(0)
+
+        try:
+            self.mc_version_select_box.setCurrentIndex(s.get_all_mc_versions().index(s.get_user_mc_version()))
+        except ValueError:
+            self.mc_version_select_box.setCurrentIndex(0)
+
         QtCore.QMetaObject.connectSlotsByName(main_window)
+
 
     def open_file_browser(self):
         filename = QtWidgets.QFileDialog.getOpenFileName()[0]
-        s.edit_user_mc_path(filename)
+        s.edit_user_settings(path=filename)
         self.update_ui()
 
     def update_ui(self):
@@ -596,7 +604,7 @@ class UiMainWindow(object):
         # refresh_thread.start()
         self.refresh()
 
-    def refresh(self, mod=False):
+    def refresh(self, mod=False, index=99999999999999999999):
         self.refresh_button.hide()
         test = False
 
@@ -658,7 +666,10 @@ class UiMainWindow(object):
 
                         # Добавление мода в интерфейс
                         mod['mod_slot'] = self.create_mod_slot(mod)
-                        self.mods.append(mod)
+                        if index != 99999999999999999999:
+                            self.mods.insert(index, mod)
+                        else:
+                            self.mods.append(mod)
                         self.update_scroll_area()
                         print()
 
@@ -672,11 +683,13 @@ class UiMainWindow(object):
                            mods_dir=r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods',
                            save_old_mod=self.save_check_box.isChecked())
 
+        index = self.mods.index(mod)
+
         self.delete_mod(mod)
 
         # TODO - Сделать добавление в тот же слот
         # Нужно использовать mod['mod_slot'].children() и добавить параметр в refresh()
-        self.refresh(mod)
+        self.refresh(mod, index)
 
     def update_scroll_area(self):
         self.clear_scroll_area()
@@ -793,6 +806,21 @@ class UiMainWindow(object):
 
         return mod_slot
 
+    def start_initial_thread(self):
+        threading.Thread(target=self.checker_and_updater).start()
+
+    def checker_and_updater(self):
+        # TODO - переделать user.settings в data py
+        while True:
+            if self.mc_version_select_box.currentText() != s.get_user_mc_version():
+                s.edit_user_settings(mc_version=self.mc_version_select_box.currentText())
+
+            print(self.console_text_edit.toPlainText(), data.console_text)
+
+            if self.console_text_edit.toPlainText() != data.console_text:
+                self.console_text_edit.setPlainText(data.console_text)
+            sleep(1)
+
     def retranslate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
         main_window.setWindowTitle(_translate("main_window", "MainWindow"))
@@ -803,7 +831,7 @@ class UiMainWindow(object):
         self.settings_button.setText(_translate("main_window", "Settings"))
 
         self.mc_version_label.setText(_translate("main_window", "Your MC version"))
-        self.mc_version_select_box.setCurrentText(_translate("main_window", self.mc_versions[0]))
+        # self.mc_version_select_box.setCurrentText(_translate("main_window", s.get_user_mc_version()))
 
         self.console_button_1.setText(_translate("main_window", "Everything"))
         self.console_button_2.setText(_translate("main_window", "Name"))
@@ -815,7 +843,7 @@ class UiMainWindow(object):
         self.label.setText(_translate("main_window", "Show:"))
         self.refresh_button.setText(_translate("main_window", "Refresh"))
         self.update_all_button.setText(_translate("main_window", "Update all"))
-        self.plain_text_edit.setPlainText(_translate("main_window", "Console Text\n"))
+        self.console_text_edit.setPlainText(_translate("main_window", "Console Text"))
         self.path_line_edit.setPlaceholderText(_translate("main_window", "Minecraft Path"))
         self.browse_button.setText(_translate("main_window", "Browse"))
         self.save_check_box.setText(_translate("main_window", "Save old mods"))
@@ -829,9 +857,12 @@ class UiMainWindow(object):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
+
     ui = UiMainWindow()
     ui.setup_ui(MainWindow)
     ui.update_ui()
+    ui.start_initial_thread()
 
     MainWindow.show()
     sys.exit(app.exec_())
+
