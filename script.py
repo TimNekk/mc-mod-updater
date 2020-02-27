@@ -327,7 +327,7 @@ def check_if_mod_is_updated(mod, user_mc_version):
             mod['new_version'] = new_version
 
             print(Fore.RED +
-                  'Mod can be updated ({0}) -> ({1})'.format(old_mod_version, new_version)
+                  'Mod can be updated ({0}) -> ({1})'.format(mod['version'], new_version)
                   + Fore.RESET)
 
             return mod
@@ -373,11 +373,14 @@ def update_mod(mod, mods_dir, save_old_mod):
     return mod
 
 
-def edit_user_mc_path(path):
+def edit_user_settings(path=False, mc_version=False):
     with open('user.settings', 'rb') as file:
         user_settings = pickle.load(file)
 
-    user_settings['mc_path'] = path
+    if path:
+        user_settings['mc_path'] = path
+    if mc_version:
+        user_settings['mc_version'] = mc_version
 
     with open('user.settings', 'wb') as file:
         pickle.dump(user_settings, file)
@@ -387,6 +390,14 @@ def get_user_mc_path():
     with open('user.settings', 'rb') as file:
         try:
             return pickle.load(file)['mc_path']
+        except:
+            return False
+
+
+def get_user_mc_version():
+    with open('user.settings', 'rb') as file:
+        try:
+            return pickle.load(file)['mc_version']
         except:
             return False
 
