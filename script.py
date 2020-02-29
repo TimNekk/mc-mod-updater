@@ -74,30 +74,29 @@ def reset_file(file_name):
     print_console('------------------------------------------')
 
 
-def show_mods_list(mode='everything'):
-    print_console('\n"mods.list" content:')
-    with open('mods.list', 'rb') as file:
-        mods_list = pickle.load(file)
-        i = 0
-        for mod in mods_list:
-            if mode == 'everything':
-                print_console('{0}) {1}'.format(i, mod))
-            elif mode == 'name':
-                print_console('{0}) {1}'.format(i, mod['name']))
-            elif mode == 'version':
-                print_console('{0}) {1}'.format(i, mod['version']))
-            elif mode == 'updated':
-                print_console('{0}) {1}'.format(i, mod['updated']))
-            elif mode == 'url':
-                print_console('{0}) {1}'.format(i, mod['url']))
-            elif mode == 'mc_version':
-                try:
-                    print_console(str(i) + ') ' + mod['mc_version'])
-                    print_console('{0}) {1}'.format(i, mod['mc_version']))
-                except KeyError:
-                    print_console('{0}) {1} has no "mc_version"'.format(i, mod['name']))
-            i += 1
-    print_console('\nTotal: {0} mods'.format(len(mods_list)))
+def show_mods_list(mode, mods):
+    print_console('\nMods list:\n')
+
+    i = 0
+    for mod in mods:
+        if mode == 'everything':
+            print_console('{0}) {1}'.format(i, mod))
+        elif mode == 'name':
+            print_console('{0}) {1}'.format(i, mod['name']))
+        elif mode == 'version':
+            print_console('{0}) {1}'.format(i, mod['version']))
+        elif mode == 'updated':
+            print_console('{0}) {1}'.format(i, mod['updated']))
+        elif mode == 'url':
+            print_console('{0}) {1}'.format(i, mod['url']))
+        elif mode == 'mc_version':
+            try:
+                print_console(str(i) + ') ' + mod['mc_version'])
+                print_console('{0}) {1}'.format(i, mod['mc_version']))
+            except KeyError:
+                print_console('{0}) {1} has no "mc_version"'.format(i, mod['name']))
+        i += 1
+    print_console('\nTotal: {0} mods'.format(len(mods)))
 
 
 def google(query):
@@ -326,35 +325,6 @@ def update_mod(mod, mods_dir, save_old_mod):
         print_console('{0} is already updated!'.format(mod['name']))
 
     return mod
-
-
-def edit_user_settings(path=False, mc_version=False):
-    with open('user.settings', 'rb') as file:
-        user_settings = pickle.load(file)
-
-    if path:
-        user_settings['mc_path'] = path
-    if mc_version:
-        user_settings['mc_version'] = mc_version
-
-    with open('user.settings', 'wb') as file:
-        pickle.dump(user_settings, file)
-
-
-def get_user_mc_path():
-    with open('user.settings', 'rb') as file:
-        try:
-            return pickle.load(file)['mc_path']
-        except:
-            return False
-
-
-def get_user_mc_version():
-    with open('user.settings', 'rb') as file:
-        try:
-            return pickle.load(file)['mc_version']
-        except:
-            return False
 
 
 def get_all_mc_versions():

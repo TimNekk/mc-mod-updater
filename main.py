@@ -14,6 +14,13 @@ def print_console(text):
     print(text)
 
 
+def save_data_py():
+    with open('data.py', 'w') as file:
+        file.write("console_text = '{0}'\nuser_mc_version = '{1}'\nuser_mc_path = '{2}'\n".format(data.console_text,
+                                                                                                  data.user_mc_version,
+                                                                                                  data.user_mc_path))
+
+
 class UiMainWindow(object):
     def __init__(self):
         self.mods = []
@@ -329,6 +336,7 @@ class UiMainWindow(object):
         self.console_button_1.setSizePolicy(size_policy)
         self.console_button_1.setObjectName("console_button_1")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_1)
+        self.console_button_1.clicked.connect(lambda: s.show_mods_list('everything', self.mods))
 
         self.console_button_2 = QtWidgets.QPushButton(self.console_buttons_widget)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
@@ -338,6 +346,7 @@ class UiMainWindow(object):
         self.console_button_2.setSizePolicy(size_policy)
         self.console_button_2.setObjectName("console_button_2")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_2)
+        self.console_button_2.clicked.connect(lambda: s.show_mods_list('name', self.mods))
 
         self.console_button_3 = QtWidgets.QPushButton(self.console_buttons_widget)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
@@ -347,6 +356,7 @@ class UiMainWindow(object):
         self.console_button_3.setSizePolicy(size_policy)
         self.console_button_3.setObjectName("console_button_3")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_3)
+        self.console_button_3.clicked.connect(lambda: s.show_mods_list('version', self.mods))
 
         self.console_button_4 = QtWidgets.QPushButton(self.console_buttons_widget)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
@@ -356,6 +366,8 @@ class UiMainWindow(object):
         self.console_button_4.setSizePolicy(size_policy)
         self.console_button_4.setObjectName("console_button_4")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_4)
+        # TODO - Заменить кнопку Updated
+        self.console_button_4.clicked.connect(lambda: s.show_mods_list('updated', self.mods))
 
         self.console_button_5 = QtWidgets.QPushButton(self.console_buttons_widget)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
@@ -365,6 +377,7 @@ class UiMainWindow(object):
         self.console_button_5.setSizePolicy(size_policy)
         self.console_button_5.setObjectName("console_button_5")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_5)
+        self.console_button_5.clicked.connect(lambda: s.show_mods_list('url', self.mods))
 
         self.console_button_6 = QtWidgets.QPushButton(self.console_buttons_widget)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
@@ -374,6 +387,7 @@ class UiMainWindow(object):
         self.console_button_6.setSizePolicy(size_policy)
         self.console_button_6.setObjectName("console_button_6")
         self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_6)
+        self.console_button_6.clicked.connect(lambda: s.show_mods_list('mc_version', self.mods))
 
         self.console_widget_vertical_layout.addWidget(self.console_buttons_widget)
         self.console_page_vertical_layout.addWidget(self.console_widget)
@@ -562,7 +576,7 @@ class UiMainWindow(object):
         self.stacked_widget.setCurrentIndex(0)
 
         try:
-            self.mc_version_select_box.setCurrentIndex(s.get_all_mc_versions().index(s.get_user_mc_version()))
+            self.mc_version_select_box.setCurrentIndex(s.get_all_mc_versions().index(data.user_mc_version))
         except ValueError:
             self.mc_version_select_box.setCurrentIndex(0)
 
@@ -570,15 +584,17 @@ class UiMainWindow(object):
 
     def open_file_browser(self):
         filename = QtWidgets.QFileDialog.getOpenFileName()[0]
-        s.edit_user_settings(path=filename)
+        data.user_mc_path = filename
+
+        # Сохранение data.py
+        save_data_py()
+
         self.update_ui()
 
     def update_ui(self):
 
-        # user_mc_path
-        user_mc_path = s.get_user_mc_path()
-        if user_mc_path:
-            self.path_line_edit.setText(str(user_mc_path))
+        if data.user_mc_path:
+            self.path_line_edit.setText(str(data.user_mc_path))
             self.border_color = self.color_dark_grey
         else:
             self.path_line_edit.clear()
@@ -820,8 +836,13 @@ class UiMainWindow(object):
         # TODO - переделать user.settings в data py
         while True:
             # Автосохранение версии MC
-            if self.mc_version_select_box.currentText() != s.get_user_mc_version():
-                s.edit_user_settings(mc_version=self.mc_version_select_box.currentText())
+            if self.mc_version_select_box.currentText() != data.user_mc_version:
+                data.user_mc_version = self.mc_version_select_box.currentText()
+
+                print(data.user_mc_version)
+
+                # Сохранение data.py
+                save_data_py()
 
             # Обновление консоли
             if self.console_text_edit.toPlainText() != data.console_text:
@@ -837,7 +858,6 @@ class UiMainWindow(object):
         self.settings_button.setText(_translate("main_window", "Settings"))
 
         self.mc_version_label.setText(_translate("main_window", "Your MC version"))
-        # self.mc_version_select_box.setCurrentText(_translate("main_window", s.get_user_mc_version()))
 
         self.console_button_1.setText(_translate("main_window", "Everything"))
         self.console_button_2.setText(_translate("main_window", "Name"))
