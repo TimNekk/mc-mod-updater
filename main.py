@@ -838,9 +838,7 @@ class UiMainWindow(object):
             # Автосохранение версии MC
             if self.mc_version_select_box.currentText() != data.user_mc_version:
                 data.user_mc_version = self.mc_version_select_box.currentText()
-
-                print(data.user_mc_version)
-
+                
                 # Сохранение data.py
                 save_data_py()
 
