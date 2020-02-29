@@ -1,1 +1,1 @@
-console_text = '1'
+console_text = ''

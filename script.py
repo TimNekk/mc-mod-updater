@@ -1,5 +1,3 @@
-# noinspection PyBroadException
-
 import zipfile
 import re
 import os
@@ -11,9 +9,10 @@ from bs4 import BeautifulSoup as BS
 import cfscrape
 import requests
 import shutil
-
+import data
 init()
 
+# noinspection PyBroadException
 
 mods_exception = ['VoxelMap']
 
@@ -39,14 +38,14 @@ def get_mod_info(file_path, file_name):
         }
 
         if mod['name'] in mods_exception:
-            print(Fore.RED + mod['name'] + ' is not supported')
+            print_console(mod['name'] + ' is not supported')
             return False
 
         try:
             mod['version'] = re.findall(r'[\w.-]+',
                                         re.findall(r'\"version.{4}[\w.-]+', file_data)[0][::-1])[0][::-1]
         except IndexError:
-            print(Fore.RED + mod['name'] + ' - no "Version" found' + Fore.RESET)
+            print_console(mod['name'] + ' - no "Version" found')
             return False
 
         try:
@@ -59,40 +58,9 @@ def get_mod_info(file_path, file_name):
 
         return mod
     else:
-        print(Fore.RED + 'No "mcmod.info" found: ' + Fore.RESET)
-        print(Fore.RED + file_path)
+        print_console('No "mcmod.info" found: ')
+        print_console(file_path)
     return False
-
-
-# def check_if_mod_in_mods_list(mod):
-#     with open('mods.list', 'rb') as file:
-#         mods_list = pickle.load(file)
-#
-#     try:
-#         for mod_listed in mods_list:
-#             if mod_listed['name'] == mod['name'] and mod_listed['version'] == mod['version']:
-#                 print(Fore.CYAN +
-#                       '{0} ({1}) is already up to date'.format(mod['name'], mod['version'])
-#                       + Fore.RESET)
-#                 return False
-#
-#     except TypeError:
-#         print('Update_mod_info() - TypeError happened!')
-#         reset_file('mods.list')
-#
-#     try:
-#         for mod_listed in mods_list:
-#             if mod_listed['name'] == mod['name']:
-#                 mod['updated'] = True
-#                 mod['url'] = False
-#             print(Fore.GREEN +
-#                   '{0} ({1}) added to "mods.list"'.format(mod['name'], mod['version'])
-#                   + Fore.RESET)
-#             return mod
-#
-#     except AttributeError:
-#         print('Update_mod_info() - AttributeError happened!')
-#         reset_file('mods.list')
 
 
 def reset_file(file_name):
@@ -101,35 +69,35 @@ def reset_file(file_name):
             pickle.dump([], file)
         else:
             pickle.dump({}, file)
-    print('------------------------------------------')
-    print('"' + file_name + '" reset')
-    print('------------------------------------------')
+    print_console('------------------------------------------')
+    print_console('"' + file_name + '" reset')
+    print_console('------------------------------------------')
 
 
 def show_mods_list(mode='everything'):
-    print(Fore.BLUE + '\n"mods.list" content:' + Fore.RESET)
+    print_console('\n"mods.list" content:')
     with open('mods.list', 'rb') as file:
         mods_list = pickle.load(file)
         i = 0
         for mod in mods_list:
             if mode == 'everything':
-                print('{0}) {1}'.format(i, mod))
+                print_console('{0}) {1}'.format(i, mod))
             elif mode == 'name':
-                print('{0}) {1}'.format(i, mod['name']))
+                print_console('{0}) {1}'.format(i, mod['name']))
             elif mode == 'version':
-                print('{0}) {1}'.format(i, mod['version']))
+                print_console('{0}) {1}'.format(i, mod['version']))
             elif mode == 'updated':
-                print('{0}) {1}'.format(i, mod['updated']))
+                print_console('{0}) {1}'.format(i, mod['updated']))
             elif mode == 'url':
-                print('{0}) {1}'.format(i, mod['url']))
+                print_console('{0}) {1}'.format(i, mod['url']))
             elif mode == 'mc_version':
                 try:
-                    print(str(i) + ') ' + mod['mc_version'])
-                    print('{0}) {1}'.format(i, mod['mc_version']))
+                    print_console(str(i) + ') ' + mod['mc_version'])
+                    print_console('{0}) {1}'.format(i, mod['mc_version']))
                 except KeyError:
-                    print('{0}) {1} has no "mc_version"'.format(i, mod['name']))
+                    print_console('{0}) {1} has no "mc_version"'.format(i, mod['name']))
             i += 1
-    print('\nTotal: {0} mods'.format(len(mods_list)))
+    print_console('\nTotal: {0} mods'.format(len(mods_list)))
 
 
 def google(query):
@@ -192,8 +160,6 @@ def get_mod_url(mod_name, user_mc_version):
 
 
 def update_mod_url(mod, user_mc_version):
-    # print(Fore.BLUE + 'Mod url searching...')
-
     if not mod['url']:
         try:
             url = get_mod_url(mod['name'], user_mc_version)
@@ -202,19 +168,13 @@ def update_mod_url(mod, user_mc_version):
                 mod['url'] = url
             else:
                 mod['url'] = False
-                print(Fore.RED +
-                      '{0} ({1}) url not found!\n'.format(mod['name'], mod['version'])
-                      + Fore.RESET)
+                print_console(                      '{0} ({1}) url not found!\n'.format(mod['name'], mod['version'])
+                    )
         except error.HTTPError:
-            print(Fore.RED + 'HTTP Error 429: Too Many Requests\n' + Fore.RESET)
-            return False
+            print_console('HTTP Error 429: Too Many Requests\n')
+            return '429'
 
-        # print(Fore.GREEN +
-        #       '{0} ({1}) url added:\n{2}\n'.format(mod['name'], mod['version'], mod['url'])
-        #       + Fore.RESET)
-        print(Fore.GREEN +
-              'Url added: {0}'.format(mod['url'])
-              + Fore.RESET)
+        print_console('Url added: {0}'.format(mod['url']))
 
         return mod
 
@@ -281,9 +241,7 @@ def check_if_mod_is_updated(mod, user_mc_version):
     if mod['version'] in new_version_text:  # Версию обновлять НЕ нужно
         mod['download_link'] = False
 
-        print(Fore.GREEN +
-              'Mod is up to date'
-              + Fore.RESET)
+        print_console('Mod is up to date')
 
         return mod
 
@@ -326,10 +284,9 @@ def check_if_mod_is_updated(mod, user_mc_version):
 
             mod['new_version'] = new_version
 
-            print(Fore.RED +
-                  'Mod can be updated ({0}) -> ({1})'.format(mod['version'], new_version)
-                  + Fore.RESET)
-
+            print_console(                  'Mod can be updated ({0}) -> ({1})'.format(mod['version'], new_version)
+                )
+            print(mod)
             return mod
 
 
@@ -363,12 +320,10 @@ def update_mod(mod, mods_dir, save_old_mod):
         else:
             os.remove(mods_dir + '\\' + mod['file_name'])
 
-        print(Fore.GREEN +
-              '{0} updated ({1}) -> ({2})'.format(mod['name'], mod['version'], mod['new_version'])
-              + Fore.RESET)
+        print_console('{0} updated ({1}) -> ({2})'.format(mod['name'], mod['version'], mod['new_version']))
 
     else:
-        print(Fore.RED + '{0} is already updated!'.format(mod['name']) + Fore.RESET)
+        print_console('{0} is already updated!'.format(mod['name']))
 
     return mod
 
@@ -422,57 +377,6 @@ def delete_mod(mod, mods_dir):
     os.remove(os.path.join(mods_dir, mod['file_name']))
 
 
-# def refresh(user_mc_version, mods_dir, reset=True):
-#     if reset:
-#         reset_file('mods.list')
-#         reset_file('user.settings')
-#
-#     # while True:
-#     #     try:
-#     #         reset_mods_updated_status()
-#     #         break
-#     #     except FileNotFoundError:
-#     #         print(Fore.RED + 'No "mods.list" found' + Fore.RESET)
-#     #         reset_file('mods.list')
-#
-#     for file_name in os.listdir(mods_dir):
-#         file_path = os.path.join(mods_dir, file_name)
-#
-#         if not os.path.isdir(file_path):
-#             mod = get_mod_info(file_path, file_name)
-#
-#             print(mod['name'])
-#
-#             if mod:
-#                 # updated_mod = update_mod_info(mod)
-#                 # if updated_mod:
-#                 #     mod = updated_mod
-#
-#                 mod = update_mod_url(mod, user_mc_version)
-#                 mod = check_if_mod_is_updated(mod, user_mc_version)
-#                 print()
-#
-#                 with open('mods.list', 'rb') as file:
-#                     mods_list = pickle.load(file)
-#
-#                 mods_list.append(mod)
-#
-#                 with open('mods.list', 'wb') as file:
-#                     pickle.dump(mods_list, file)
-
-    # while True:
-    #
-    #     if not :
-    #         show_mods_list()
-    #         break
-    # clear_mods_list()
-
-# refresh('1.12.2', r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods', True)
-#
-# with open('mods.list', 'rb') as file:
-#     listt = pickle.load(file)
-#
-# for mod in listt:
-#     update_mod(mod, r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods', True)
-#
-# print(listt)
+def print_console(text):
+    data.console_text += '\n' + text
+    print(text)

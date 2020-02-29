@@ -4,10 +4,14 @@ import script as s
 import threading
 import os
 import data
-from time import sleep
-import random
+
 
 # noinspection PyAttributeOutsideInit
+
+
+def print_console(text):
+    data.console_text += '\n' + text
+    print(text)
 
 
 class UiMainWindow(object):
@@ -564,7 +568,6 @@ class UiMainWindow(object):
 
         QtCore.QMetaObject.connectSlotsByName(main_window)
 
-
     def open_file_browser(self):
         filename = QtWidgets.QFileDialog.getOpenFileName()[0]
         s.edit_user_settings(path=filename)
@@ -599,7 +602,7 @@ class UiMainWindow(object):
         MainWindow.setStyleSheet(stylesheet)
 
     def refresh_button_pressed(self):
-        # TODO - Решить проблема с threading
+        # TODO - Решить проблему с threading
         # refresh_thread = threading.Thread(target=self.refresh)
         # refresh_thread.start()
         self.refresh()
@@ -654,8 +657,12 @@ class UiMainWindow(object):
 
                     # Достаточно ли информации чтобы работать с модом
                     if mod:
-                        print(mod['name'])
+                        print_console(mod['name'])
                         mod = s.update_mod_url(mod, self.mc_version_select_box.currentText())
+
+                        # HTTP Error 429: Too Many Requests
+                        if mod == '429':
+                            break
 
                         # Нашли ли ссылку на этот мод
                         if not mod['url']:
@@ -671,12 +678,12 @@ class UiMainWindow(object):
                         else:
                             self.mods.append(mod)
                         self.update_scroll_area()
-                        print()
+                        print_console()
 
         self.refresh_button.show()
         if self.mods:
             self.update_all_button.show()
-        print('\nRefreshing is done!\n')
+        print_console('\nRefreshing is done!\n')
 
     def update_mod(self, mod):
         mod = s.update_mod(mod=mod,
@@ -812,14 +819,13 @@ class UiMainWindow(object):
     def checker_and_updater(self):
         # TODO - переделать user.settings в data py
         while True:
+            # Автосохранение версии MC
             if self.mc_version_select_box.currentText() != s.get_user_mc_version():
                 s.edit_user_settings(mc_version=self.mc_version_select_box.currentText())
 
-            print(self.console_text_edit.toPlainText(), data.console_text)
-
+            # Обновление консоли
             if self.console_text_edit.toPlainText() != data.console_text:
                 self.console_text_edit.setPlainText(data.console_text)
-            sleep(1)
 
     def retranslate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
