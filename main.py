@@ -511,7 +511,7 @@ class UiMainWindow(object):
             data.user_mc_path = filename + '/mods'
         else:
             print_console('\nInvalid Minecraft directory!')
-
+    
         # Сохранение data.py
         save_data_py()
 
