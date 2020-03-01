@@ -10,15 +10,14 @@ import data
 
 
 def print_console(text):
-    data.console_text += '\n' + text
+    data.console_text += text + '\n'
     print(text)
 
 
 def save_data_py():
     with open('data.py', 'w') as file:
-        file.write("console_text = '{0}'\nuser_mc_version = '{1}'\nuser_mc_path = '{2}'\n".format(data.console_text,
-                                                                                                  data.user_mc_version,
-                                                                                                  data.user_mc_path))
+        file.write("console_text = ''\nuser_mc_version = '{0}'\nuser_mc_path = '{1}'\nconsole_font = '{2}'".format(
+            data.user_mc_version, data.user_mc_path, data.console_font))
 
 
 class UiMainWindow(object):
@@ -312,84 +311,6 @@ class UiMainWindow(object):
         self.console_text_edit.setReadOnly(True)
         self.console_text_edit.setObjectName("plain_text_edit")
         self.console_widget_vertical_layout.addWidget(self.console_text_edit)
-
-        self.label = QtWidgets.QLabel(self.console_widget)
-        self.label.setObjectName("label")
-        self.console_widget_vertical_layout.addWidget(self.label)
-
-        # main_widget -> stacked_widget -> console_page -> console_widget -> console_buttons_widget
-
-        self.console_buttons_widget = QtWidgets.QWidget(self.console_widget)
-        self.console_buttons_widget.setMinimumSize(QtCore.QSize(0, 25))
-        self.console_buttons_widget.setObjectName("console_buttons_widget")
-
-        self.console_buttons_widget_horizontal_layout = QtWidgets.QHBoxLayout(self.console_buttons_widget)
-        self.console_buttons_widget_horizontal_layout.setContentsMargins(0, 0, 0, 0)
-        self.console_buttons_widget_horizontal_layout.setSpacing(15)
-        self.console_buttons_widget_horizontal_layout.setObjectName("console_buttons_widget_horizontal_layout")
-
-        self.console_button_1 = QtWidgets.QPushButton(self.console_buttons_widget)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        size_policy.setHorizontalStretch(0)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.console_button_1.sizePolicy().hasHeightForWidth())
-        self.console_button_1.setSizePolicy(size_policy)
-        self.console_button_1.setObjectName("console_button_1")
-        self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_1)
-        self.console_button_1.clicked.connect(lambda: s.show_mods_list('everything', self.mods))
-
-        self.console_button_2 = QtWidgets.QPushButton(self.console_buttons_widget)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        size_policy.setHorizontalStretch(0)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.console_button_2.sizePolicy().hasHeightForWidth())
-        self.console_button_2.setSizePolicy(size_policy)
-        self.console_button_2.setObjectName("console_button_2")
-        self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_2)
-        self.console_button_2.clicked.connect(lambda: s.show_mods_list('name', self.mods))
-
-        self.console_button_3 = QtWidgets.QPushButton(self.console_buttons_widget)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        size_policy.setHorizontalStretch(0)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.console_button_3.sizePolicy().hasHeightForWidth())
-        self.console_button_3.setSizePolicy(size_policy)
-        self.console_button_3.setObjectName("console_button_3")
-        self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_3)
-        self.console_button_3.clicked.connect(lambda: s.show_mods_list('version', self.mods))
-
-        self.console_button_4 = QtWidgets.QPushButton(self.console_buttons_widget)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        size_policy.setHorizontalStretch(0)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.console_button_4.sizePolicy().hasHeightForWidth())
-        self.console_button_4.setSizePolicy(size_policy)
-        self.console_button_4.setObjectName("console_button_4")
-        self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_4)
-        # TODO - Заменить кнопку Updated
-        self.console_button_4.clicked.connect(lambda: s.show_mods_list('updated', self.mods))
-
-        self.console_button_5 = QtWidgets.QPushButton(self.console_buttons_widget)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        size_policy.setHorizontalStretch(0)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.console_button_5.sizePolicy().hasHeightForWidth())
-        self.console_button_5.setSizePolicy(size_policy)
-        self.console_button_5.setObjectName("console_button_5")
-        self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_5)
-        self.console_button_5.clicked.connect(lambda: s.show_mods_list('url', self.mods))
-
-        self.console_button_6 = QtWidgets.QPushButton(self.console_buttons_widget)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        size_policy.setHorizontalStretch(0)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.console_button_6.sizePolicy().hasHeightForWidth())
-        self.console_button_6.setSizePolicy(size_policy)
-        self.console_button_6.setObjectName("console_button_6")
-        self.console_buttons_widget_horizontal_layout.addWidget(self.console_button_6)
-        self.console_button_6.clicked.connect(lambda: s.show_mods_list('mc_version', self.mods))
-
-        self.console_widget_vertical_layout.addWidget(self.console_buttons_widget)
         self.console_page_vertical_layout.addWidget(self.console_widget)
         self.stacked_widget.addWidget(self.console_page)
 
@@ -560,6 +481,7 @@ class UiMainWindow(object):
         self.apply_button.setMinimumSize(QtCore.QSize(125, 40))
         self.apply_button.setMaximumSize(QtCore.QSize(125, 40))
         self.apply_button.setObjectName("apply_button")
+        self.apply_button.clicked.connect(self.update_ui)
         self.apply_widget_horizontal_layout.addWidget(self.apply_button)
 
         self.settings_widget_vertical_layout.addWidget(self.apply_widget)
@@ -583,8 +505,12 @@ class UiMainWindow(object):
         QtCore.QMetaObject.connectSlotsByName(main_window)
 
     def open_file_browser(self):
-        filename = QtWidgets.QFileDialog.getOpenFileName()[0]
-        data.user_mc_path = filename
+        filename = QtWidgets.QFileDialog.getExistingDirectory()
+        if os.path.exists(filename + '/mods'):
+            print_console('\nMinecraft directory set to: ' + filename)
+            data.user_mc_path = filename + '/mods'
+        else:
+            print_console('\nInvalid Minecraft directory!')
 
         # Сохранение data.py
         save_data_py()
@@ -594,7 +520,7 @@ class UiMainWindow(object):
     def update_ui(self):
 
         if data.user_mc_path:
-            self.path_line_edit.setText(str(data.user_mc_path))
+            self.path_line_edit.setText(str(data.user_mc_path[:-5]))
             self.border_color = self.color_dark_grey
         else:
             self.path_line_edit.clear()
@@ -610,7 +536,7 @@ class UiMainWindow(object):
         stylesheet += ".QComboBox {background-color: rgb(50, 50, 50); color: white; border-radius: 10px; font: 10pt \"Arial\"}"
         stylesheet += ".QScrollArea {border-radius:10px 10px 0px 0px; background-color: rgb(37, 37, 37)}"
         stylesheet += "#mods_page, #console_page, #settings_page {background-color: rgb(50, 50, 50)}"
-        stylesheet += ".QPlainTextEdit {background-color: rgb(37, 37, 37); color: white; font: 8pt \"Arial\"; border: 1px solid rgb(50, 50, 50); border-radius: 10px;}"
+        stylesheet += ".QPlainTextEdit {background-color: rgb(37, 37, 37); color: white; font: " + data.console_font + "pt \"Arial\"; border: 1px solid rgb(50, 50, 50); border-radius: 10px;}"
         stylesheet += ".Line {color: rgb(50, 50, 50)}"
         stylesheet += ".QLineEdit {background-color: rgb(50, 50, 50); border-radius: 5px; color: white; border:1px solid " + self.border_color + " }"
         stylesheet += "#font_size_label {font: 75 12pt \"Arial\"}"
@@ -624,12 +550,20 @@ class UiMainWindow(object):
         self.refresh()
 
     def refresh(self, mod=False, index=99999999999999999999):
+        # Установлен ли путь до папки MC
+        if not data.user_mc_path:
+            print_console('Please, select MC directory!')
+            self.stacked_widget.setCurrentIndex(2)
+            return False
+
         self.refresh_button.hide()
-        test = False
+
+        print_console('Refreshing started!\n')
 
         # ---------------------------------------------------------------
         # Test
         # ---------------------------------------------------------------
+        test = False
         if test:
             mods = [{'name': 'Chisel', 'file_name': 'Chisel-MC1.12-0.1.0.22.jar',
                      'url': 'https://www.curseforge.com/minecraft/mc-mods/chisel/files/all', 'version': '0.1.0.22',
@@ -689,12 +623,12 @@ class UiMainWindow(object):
 
                         # Добавление мода в интерфейс
                         mod['mod_slot'] = self.create_mod_slot(mod)
-                        if index != 99999999999999999999:
-                            self.mods.insert(index, mod)
-                        else:
+                        if index == 99999999999999999999:
                             self.mods.append(mod)
+                        else:
+                            self.mods.insert(index, mod)
                         self.update_scroll_area()
-                        print_console()
+                        print_console('')
 
         self.refresh_button.show()
         if self.mods:
@@ -738,6 +672,7 @@ class UiMainWindow(object):
         self.mods.remove(mod)  # Удаление из self.mods
         mod['mod_slot'].setParent(None)  # Удаление слота
         self.update_scroll_area()  # Изменение нумерации слотов
+        s.delete_mod(mod)
 
     def create_mod_slot(self, mod):
         # Создание слота
@@ -833,12 +768,19 @@ class UiMainWindow(object):
         threading.Thread(target=self.checker_and_updater).start()
 
     def checker_and_updater(self):
-        # TODO - переделать user.settings в data py
         while True:
             # Автосохранение версии MC
             if self.mc_version_select_box.currentText() != data.user_mc_version:
                 data.user_mc_version = self.mc_version_select_box.currentText()
-                
+
+                # Сохранение data.py
+                save_data_py()
+
+            # Изменение значения рядом со слайдером
+            if self.font_size_label.text() != str(self.horizontal_slider.value()):
+                data.console_font = str(self.horizontal_slider.value())
+                self.font_size_label.setText(data.console_font)
+
                 # Сохранение data.py
                 save_data_py()
 
@@ -854,17 +796,7 @@ class UiMainWindow(object):
         self.mods_button.setText(_translate("main_window", "Mods"))
         self.console_button.setText(_translate("main_window", "Console"))
         self.settings_button.setText(_translate("main_window", "Settings"))
-
         self.mc_version_label.setText(_translate("main_window", "Your MC version"))
-
-        self.console_button_1.setText(_translate("main_window", "Everything"))
-        self.console_button_2.setText(_translate("main_window", "Name"))
-        self.console_button_3.setText(_translate("main_window", "Version"))
-        self.console_button_4.setText(_translate("main_window", "Updated"))
-        self.console_button_5.setText(_translate("main_window", "Url"))
-        self.console_button_6.setText(_translate("main_window", "Mc Version"))
-
-        self.label.setText(_translate("main_window", "Show:"))
         self.refresh_button.setText(_translate("main_window", "Refresh"))
         self.update_all_button.setText(_translate("main_window", "Update all"))
         self.console_text_edit.setPlainText(_translate("main_window", "Console Text"))
@@ -889,4 +821,3 @@ if __name__ == "__main__":
 
     MainWindow.show()
     sys.exit(app.exec_())
-
