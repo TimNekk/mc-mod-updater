@@ -1,7 +1,7 @@
 import zipfile
 import re
 import os
-import googlesearch
+import yandex_search
 import pickle
 from colorama import init, Fore
 from urllib import error
@@ -15,6 +15,7 @@ init()
 # noinspection PyBroadException
 
 mods_exception = ['VoxelMap']
+yandex = yandex_search.Yandex(api_user='megamax00', api_key='03.907013875:1908728c0c5f64a885f21721a1f1f4ee')
 
 
 def unzip(file_path):
@@ -80,7 +81,9 @@ def show_mods_list(mode, mods):
     i = 0
     for mod in mods:
         if mode == 'everything':
-            print_console('{0}) {1}'.format(i, mod))
+            print_console(mod['name'])
+            for item in mod:
+                print_console('{0}) {1}'.format(i, mod))
         elif mode == 'name':
             print_console('{0}) {1}'.format(i, mod['name']))
         elif mode == 'version':
@@ -99,10 +102,12 @@ def show_mods_list(mode, mods):
     print_console('\nTotal: {0} mods'.format(len(mods)))
 
 
-def google(query):
+def search_with_yandex(query):
     urls = []
-    for url in googlesearch.search(query, tld="co.in", num=3, stop=3, pause=0):
-        urls.append(url)
+    for item in yandex.search(query).items:
+        urls.append(item['url'])
+        if len(urls) == 3:
+            break
     return urls
 
 
@@ -115,9 +120,10 @@ def transform_files_urls(urls):
 
 
 def get_mod_url(mod_name, user_mc_version):
-    urls = transform_files_urls(google('curseforge.com ' + mod_name))
+    urls = transform_files_urls(search_with_yandex('curseforge.com ' + mod_name))
 
     scraper = cfscrape.create_scraper()
+
     for _ in range(0, 2):
         for url in urls:
             r = scraper.get(url)
@@ -154,7 +160,7 @@ def get_mod_url(mod_name, user_mc_version):
             except IndexError:
                 pass
 
-        urls = transform_files_urls(google('curseforge.com ' + mod_name + 'updated'))
+        urls = transform_files_urls(search_with_yandex('curseforge.com ' + mod_name + 'updated'))
     return False
 
 
@@ -167,8 +173,7 @@ def update_mod_url(mod, user_mc_version):
                 mod['url'] = url
             else:
                 mod['url'] = False
-                print_console(                      '{0} ({1}) url not found!\n'.format(mod['name'], mod['version'])
-                    )
+                print_console('{0} ({1}) url not found!\n'.format(mod['name'], mod['version']))
         except error.HTTPError:
             print_console('HTTP Error 429: Too Many Requests\n')
             return '429'
@@ -343,10 +348,11 @@ def get_all_mc_versions():
                     return versions
 
 
-def delete_mod(mod, mods_dir):
-    os.remove(os.path.join(mods_dir, mod['file_name']))
+def delete_mod(mod):
+    os.remove(os.path.join(data.user_mc_path, mod['file_name']))
+    print_console('{0} deleted!'.format(mod['name']))
 
 
 def print_console(text):
-    data.console_text += '\n' + text
+    data.console_text += text + '\n'
     print(text)
