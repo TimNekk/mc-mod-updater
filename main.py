@@ -4,6 +4,7 @@ import script as s
 import threading
 import os
 import data
+from time import sleep
 
 
 # noinspection PyAttributeOutsideInit
@@ -15,9 +16,15 @@ def print_console(text):
 
 
 def save_data_py():
+    text = "console_text = ''\n"
+    text += "user_mc_version = '{0}'\n".format(data.user_mc_version)
+    text += "user_mc_path = '{0}'\n".format(data.user_mc_path)
+    text += "console_font = '{0}'\n".format(data.console_font)
+    text += "save_old_mods = {0}\n".format(data.save_old_mods)
+    text += "dark_mode = {0}\n".format(data.dark_mode)
+
     with open('data.py', 'w') as file:
-        file.write("console_text = ''\nuser_mc_version = '{0}'\nuser_mc_path = '{1}'\nconsole_font = '{2}'".format(
-            data.user_mc_version, data.user_mc_path, data.console_font))
+        file.write(text)
 
 
 class UiMainWindow(object):
@@ -27,6 +34,7 @@ class UiMainWindow(object):
         self.color_light_grey = 'rgb(50, 50, 50);'
         self.color_red = 'rgb(255, 47, 50)'
         self.border_color = self.color_red
+        self.stop_threads = False
 
     def setup_ui(self, main_window):
         main_window.setObjectName("main_window")
@@ -392,11 +400,12 @@ class UiMainWindow(object):
         self.check_box_widget_vertical_layout.setObjectName("check_box_widget_vertical_layout")
 
         self.save_check_box = QtWidgets.QCheckBox(self.check_box_widget)
+        self.save_check_box.setChecked(data.save_old_mods)
         self.save_check_box.setObjectName("save_check_box")
         self.check_box_widget_vertical_layout.addWidget(self.save_check_box)
 
         self.dark_check_box = QtWidgets.QCheckBox(self.check_box_widget)
-        self.dark_check_box.setChecked(True)
+        self.dark_check_box.setChecked(data.dark_mode)
         self.dark_check_box.setObjectName("dark_check_box")
         self.check_box_widget_vertical_layout.addWidget(self.dark_check_box)
 
@@ -434,7 +443,7 @@ class UiMainWindow(object):
         self.horizontal_slider.setMinimum(6)
         self.horizontal_slider.setMaximum(16)
         self.horizontal_slider.setPageStep(1)
-        self.horizontal_slider.setProperty("value", 8)
+        self.horizontal_slider.setProperty("value", int(data.console_font))
         self.horizontal_slider.setTracking(True)
         self.horizontal_slider.setOrientation(QtCore.Qt.Horizontal)
         self.horizontal_slider.setInvertedAppearance(False)
@@ -475,13 +484,14 @@ class UiMainWindow(object):
         self.default_button.setMinimumSize(QtCore.QSize(125, 40))
         self.default_button.setMaximumSize(QtCore.QSize(125, 40))
         self.default_button.setObjectName("default_button")
+        self.default_button.clicked.connect(self.reset_data_py)
         self.apply_widget_horizontal_layout.addWidget(self.default_button)
 
         self.apply_button = QtWidgets.QPushButton(self.apply_widget)
         self.apply_button.setMinimumSize(QtCore.QSize(125, 40))
         self.apply_button.setMaximumSize(QtCore.QSize(125, 40))
         self.apply_button.setObjectName("apply_button")
-        self.apply_button.clicked.connect(self.update_ui)
+        self.apply_button.clicked.connect(self.apply_button_pressed)
         self.apply_widget_horizontal_layout.addWidget(self.apply_button)
 
         self.settings_widget_vertical_layout.addWidget(self.apply_widget)
@@ -516,6 +526,30 @@ class UiMainWindow(object):
         save_data_py()
 
         self.update_ui()
+
+    def reset_data_py(self):
+        text = "console_text = ''\n"
+        text += "user_mc_version = ''\n"
+        text += "user_mc_path = ''\n"
+        text += "console_font = '8'\n"
+        text += "save_old_mods = False\n"
+        text += "dark_mode = True\n"
+
+        with open('data.py', 'w') as file:
+            file.write(text)
+
+        data.console_text = ''
+        data.user_mc_version = ''
+        data.user_mc_path = ''
+        data.console_font = '8'
+        data.save_old_mods = False
+        data.dark_mode = True
+
+        self.horizontal_slider.setProperty("value", int(data.console_font))
+        self.dark_check_box.setChecked(data.dark_mode)
+        self.save_check_box.setChecked(data.save_old_mods)
+
+        print_console('data.py reset!\n')
 
     def update_ui(self):
 
@@ -640,12 +674,9 @@ class UiMainWindow(object):
                            mods_dir=r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods',
                            save_old_mod=self.save_check_box.isChecked())
 
-        index = self.mods.index(mod)
-
         self.delete_mod(mod)
 
-        # TODO - Сделать добавление в тот же слот
-        # Нужно использовать mod['mod_slot'].children() и добавить параметр в refresh()
+        index = self.mods.index(mod)
         self.refresh(mod, index)
 
     def update_scroll_area(self):
@@ -764,11 +795,26 @@ class UiMainWindow(object):
 
         return mod_slot
 
+    def apply_button_pressed(self):
+        self.stop_threads = True
+
+        data.console_font = str(self.horizontal_slider.value())
+        data.save_old_mods = self.save_check_box.isChecked()
+        data.dark_mode = self.dark_check_box.isChecked()
+
+        # Сохранение data.py
+        save_data_py()
+
+        self.apply_button.hide()
+
+        self.start_initial_thread()
+
     def start_initial_thread(self):
+        self.stop_threads = False
         threading.Thread(target=self.checker_and_updater).start()
 
     def checker_and_updater(self):
-        while True:
+        while not self.stop_threads:
             # Автосохранение версии MC
             if self.mc_version_select_box.currentText() != data.user_mc_version:
                 data.user_mc_version = self.mc_version_select_box.currentText()
@@ -778,11 +824,21 @@ class UiMainWindow(object):
 
             # Изменение значения рядом со слайдером
             if self.font_size_label.text() != str(self.horizontal_slider.value()):
-                data.console_font = str(self.horizontal_slider.value())
-                self.font_size_label.setText(data.console_font)
+                # data.console_font = str(self.horizontal_slider.value())
+                self.font_size_label.setText(str(self.horizontal_slider.value()))
 
                 # Сохранение data.py
                 save_data_py()
+
+            # Пороверка изменения настроек и появление кнопки apply
+            if self.save_check_box.isChecked() != data.save_old_mods:
+                self.apply_button.show()
+            elif self.dark_check_box.isChecked() != data.dark_mode:
+                self.apply_button.show()
+            elif str(self.horizontal_slider.value()) != data.console_font:
+                self.apply_button.show()
+            else:
+                self.apply_button.hide()
 
             # Обновление консоли
             if self.console_text_edit.toPlainText() != data.console_text:
@@ -811,6 +867,11 @@ class UiMainWindow(object):
 
 
 if __name__ == "__main__":
+    try:
+        print(data.dark_mode)
+    except:
+        reset_data_py()
+
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
 
