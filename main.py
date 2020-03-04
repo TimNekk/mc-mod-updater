@@ -632,39 +632,41 @@ class UiMainWindow(object):
                 # Проход через все файлы в попке mods
                 for file_name in os.listdir(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods'):
                     file_path = os.path.join(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods', file_name)
-                    files.append([file_name, file_path])
+
+                    # Это файл, а не папка?
+                    if not os.path.isfile(file_path):
+                        files.append([file_name, file_path])
 
             print(files)
 
             for file in files:
-                # Это файл, а не папка?
-                if not os.path.isdir(file[1]):
-                    mod = s.get_mod_info(file[1], file[0])
+                mod = s.get_mod_info(file[1], file[0])
 
-                    # Достаточно ли информации чтобы работать с модом
-                    if mod:
-                        print_console(mod['name'])
-                        mod = s.update_mod_url(mod, self.mc_version_select_box.currentText())
+                # Достаточно ли информации чтобы работать с модом
+                if mod:
+                    print_console(mod['name'])
+                    mod = s.update_mod_url(mod, self.mc_version_select_box.currentText())
 
-                        # HTTP Error 429: Too Many Requests
-                        if mod == '429':
-                            break
+                    # HTTP Error 429: Too Many Requests
+                    if mod == '429':
+                        break
 
-                        # Нашли ли ссылку на этот мод
-                        if not mod['url']:
-                            continue
+                    # Нашли ли ссылку на этот мод
+                    if not mod['url']:
+                        continue
 
-                        mod = s.check_if_mod_is_updated(mod, self.mc_version_select_box.currentText())
-                        # Мод прошел все проверки и обработки
+                    mod = s.check_if_mod_is_updated(mod, self.mc_version_select_box.currentText())
+                    # Мод прошел все проверки и обработки
 
-                        # Добавление мода в интерфейс
-                        mod['mod_slot'] = self.create_mod_slot(mod)
-                        if index == 99999999999999999999:
-                            self.mods.append(mod)
-                        else:
-                            self.mods.insert(index, mod)
-                        self.update_scroll_area()
-                        print_console('')
+                    # Добавление мода в интерфейс
+                    mod['mod_slot'] = self.create_mod_slot(mod)
+                    if index == 99999999999999999999:
+                        self.mods.append(mod)
+                    else:
+                        self.mods.insert(index, mod)
+                    self.update_scroll_area()
+                    print_console('')
+
 
         self.refresh_button.show()
         if self.mods:
