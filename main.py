@@ -5,6 +5,8 @@ import threading
 import os
 import data
 from time import sleep
+import pathlib
+import subprocess
 
 
 # noinspection PyAttributeOutsideInit
@@ -17,14 +19,39 @@ def print_console(text):
 
 def save_data_py():
     text = "console_text = ''\n"
-    text += "user_mc_version = '{0}'\n".format(data.user_mc_version)
-    text += "user_mc_path = '{0}'\n".format(data.user_mc_path)
-    text += "console_font = '{0}'\n".format(data.console_font)
-    text += "save_old_mods = {0}\n".format(data.save_old_mods)
-    text += "dark_mode = {0}\n".format(data.dark_mode)
+    text += "user_mc_version = '{}'\n".format(data.user_mc_version)
+    text += "user_mc_path = r'{}'\n".format(data.user_mc_path)
+    text += "console_font = '{}'\n".format(data.console_font)
+    text += "save_old_mods = {}\n".format(data.save_old_mods)
+    text += "dark_mode = {}\n".format(data.dark_mode)
 
     with open('data.py', 'w') as file:
         file.write(text)
+
+
+def reset_data_py():
+    expected_mc_path = pathlib.Path.home() / 'AppData' / 'Roaming' / '.minecraft' / 'mods'
+    if not os.path.exists(expected_mc_path):
+        expected_mc_path = ''
+
+    text = "console_text = ''\n"
+    text += "user_mc_version = ''\n"
+    text += "user_mc_path = r'{}'\n".format(str(expected_mc_path))
+    text += "console_font = '8'\n"
+    text += "save_old_mods = False\n"
+    text += "dark_mode = True\n"
+
+    with open('data.py', 'w') as file:
+        file.write(text)
+
+    data.console_text = ''
+    data.user_mc_version = ''
+    data.user_mc_path = str(expected_mc_path)
+    data.console_font = '8'
+    data.save_old_mods = False
+    data.dark_mode = True
+
+    print_console('data.py reset!\n')
 
 
 class UiMainWindow(object):
@@ -484,7 +511,7 @@ class UiMainWindow(object):
         self.default_button.setMinimumSize(QtCore.QSize(125, 40))
         self.default_button.setMaximumSize(QtCore.QSize(125, 40))
         self.default_button.setObjectName("default_button")
-        self.default_button.clicked.connect(self.reset_data_py)
+        self.default_button.clicked.connect(self.reset_settings)
         self.apply_widget_horizontal_layout.addWidget(self.default_button)
 
         self.apply_button = QtWidgets.QPushButton(self.apply_widget)
@@ -527,30 +554,6 @@ class UiMainWindow(object):
 
         self.update_ui()
 
-    def reset_data_py(self):
-        text = "console_text = ''\n"
-        text += "user_mc_version = ''\n"
-        text += "user_mc_path = ''\n"
-        text += "console_font = '8'\n"
-        text += "save_old_mods = False\n"
-        text += "dark_mode = True\n"
-
-        with open('data.py', 'w') as file:
-            file.write(text)
-
-        data.console_text = ''
-        data.user_mc_version = ''
-        data.user_mc_path = ''
-        data.console_font = '8'
-        data.save_old_mods = False
-        data.dark_mode = True
-
-        self.horizontal_slider.setProperty("value", int(data.console_font))
-        self.dark_check_box.setChecked(data.dark_mode)
-        self.save_check_box.setChecked(data.save_old_mods)
-
-        print_console('data.py reset!\n')
-
     def update_ui(self):
 
         if data.user_mc_path:
@@ -578,9 +581,6 @@ class UiMainWindow(object):
         MainWindow.setStyleSheet(stylesheet)
 
     def refresh_button_pressed(self):
-        # TODO - Решить проблему с threading
-        # refresh_thread = threading.Thread(target=self.refresh)
-        # refresh_thread.start()
         self.refresh()
 
     def refresh(self, mod=False, index=99999999999999999999):
@@ -633,6 +633,8 @@ class UiMainWindow(object):
                 for file_name in os.listdir(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods'):
                     file_path = os.path.join(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods', file_name)
                     files.append([file_name, file_path])
+
+            print(files)
 
             for file in files:
                 # Это файл, а не папка?
@@ -756,6 +758,8 @@ class UiMainWindow(object):
                                            "}")
         mod_slot_name_button.setObjectName("mod_slot_1_name_button")
         mod_slot_name_button.setText(mod['name'])  # Присвиевание имени
+        mod_slot_name_button.clicked.connect(
+            lambda: subprocess.Popen(r'explorer /select,"{}"'.format(os.path.join(data.user_mc_path, mod['file_name']))))
         mod_slot_horizontal_layout.addWidget(mod_slot_name_button)
 
         spacer_item = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -808,6 +812,18 @@ class UiMainWindow(object):
         self.apply_button.hide()
 
         self.start_initial_thread()
+
+    def reset_settings(self):
+        reset_data_py()
+
+        if data.user_mc_path:
+            print_console('Minecraft Path set to:\n' + data.user_mc_path)
+
+        self.horizontal_slider.setProperty("value", int(data.console_font))
+        self.dark_check_box.setChecked(data.dark_mode)
+        self.save_check_box.setChecked(data.save_old_mods)
+
+        self.update_ui()
 
     def start_initial_thread(self):
         self.stop_threads = False
@@ -868,7 +884,7 @@ class UiMainWindow(object):
 
 if __name__ == "__main__":
     try:
-        print(data.dark_mode)
+        data.dark_mode
     except:
         reset_data_py()
 
