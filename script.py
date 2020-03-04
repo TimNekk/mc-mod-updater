@@ -10,6 +10,7 @@ import cfscrape
 import requests
 import shutil
 import data
+import pathlib
 init()
 
 # noinspection PyBroadException
