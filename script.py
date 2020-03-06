@@ -28,8 +28,8 @@ def unzip(file_path):
     return True
 
 
-def get_mod_info(file_path, file_name):
-    if unzip(file_path):
+def get_mod_info(file_name):
+    if unzip(os.path.join(data.user_mc_path, file_name)):
         with open('mcmod.info', 'rb') as file:
             file_data = str(file.read())
 
@@ -61,7 +61,7 @@ def get_mod_info(file_path, file_name):
         return mod
     else:
         print_console('No "mcmod.info" found: ')
-        print_console(file_path)
+        print_console(os.path.join(data.user_mc_path, file_name))
     return False
 
 
@@ -116,7 +116,18 @@ def transform_files_urls(urls):
     new_urls = []
     for url in urls:
         new_url = re.findall(r'[\w\-:/.]+', url)[0]
+
+        if 'all' in new_url:
+            new_url = new_url[:-4]
+
+        if 'files' in new_url:
+            new_url = new_url[:-6]
+
+        if 'download' in new_url:
+            new_url = new_url[:-9]
+
         new_urls.append(new_url + '/files/all')
+
     return new_urls
 
 
