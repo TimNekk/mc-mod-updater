@@ -7,6 +7,8 @@ import data
 from time import sleep
 import pathlib
 import subprocess
+from progressbar_window import UiProgressBarWindow
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
 
 # noinspection PyAttributeOutsideInit
@@ -52,6 +54,104 @@ def reset_data_py():
     data.dark_mode = True
 
     print_console('data.py reset!\n')
+
+
+class MyThread(QThread):
+    def __init__(self, mainwindow, mod=False, index=99999999999999999999):
+        super().__init__()
+        self.mainwindow = mainwindow
+        self.mod = mod
+        self.index = index
+
+    def run(self):
+        # Установлен ли путь до папки MC
+        if not data.user_mc_path:
+            print_console('Please, select MC directory!')
+            self.mainwindow.stacked_widget.setCurrentIndex(2)
+            return False
+
+        self.mainwindow.refresh_button.hide()
+
+        print_console('Refreshing started!\n')
+
+        # ---------------------------------------------------------------
+        # Test
+        # ---------------------------------------------------------------
+        test = False
+        if test:
+            mods = [{'name': 'Chisel', 'file_name': 'Chisel-MC1.12-0.1.0.22.jar',
+                     'url': 'https://www.curseforge.com/minecraft/mc-mods/chisel/files/all', 'version': '0.1.0.22',
+                     'mc_version': '1.12',
+                     'download_link': 'https://www.curseforge.com/minecraft/mc-mods/chisel/download/2813538/file',
+                     'new_version_text': 'Chisel - MC1.12.2-1.0.1.44', 'new_version': '1.0.1.44'},
+                    {'name': 'JourneyMap', 'file_name': 'journeymap-1.12.2-5.5.9.jar',
+                     'url': 'https://www.curseforge.com/minecraft/mc-mods/journeymap/files/all', 'version': '5.5.9',
+                     'mc_version': '1.12.2', 'download_link': False}, {'name': 'Test', 'file_name': 'Test.jar',
+                                                                       'url': 'https://www.curseforge.com/minecraft/mc-mods/Test/files/all',
+                                                                       'version': 'Test',
+                                                                       'mc_version': 'Test', 'download_link': False}]
+
+            for mod in mods:
+                mod['mod_slot'] = self.create_mod_slot(mod)
+                self.mods.append(mod)
+                self.update_scroll_area()
+        # ---------------------------------------------------------------
+        # Test
+        # ---------------------------------------------------------------
+
+        elif not test:
+            files = []
+
+            # Если нужно обновить конкретный мод
+            if self.mod:
+                file_name = self.mod['new_version_text']
+                file_path = os.path.join(data.user_mc_path, file_name)
+                files.append([file_name, file_path])
+            else:
+                self.mainwindow.mods = []
+
+                # Проход через все файлы в попке mods
+                for file_name in os.listdir(data.user_mc_path):
+                    # Это файл, а не папка?
+                    if os.path.isfile(os.path.join(data.user_mc_path, file_name)):
+                        files.append(file_name)
+
+            print(files)
+            self.mainwindow.progress_bar_window_ui.init_mods(files)
+
+            for file in files:
+                # self.mainwindow.progress_bar_window_ui.accept_slot(file)
+                self.mod = s.get_mod_info(file)
+
+                # Достаточно ли информации чтобы работать с модом
+                if self.mod:
+                    print_console(self.mod['name'])
+                    self.mod = s.update_mod_url(self.mod, self.mainwindow.mc_version_select_box.currentText())
+
+                    # HTTP Error 429: Too Many Requests
+                    if self.mod == '429':
+                        break
+
+                    # Нашли ли ссылку на этот мод
+                    if not self.mod['url']:
+                        continue
+
+                    self.mod = s.check_if_mod_is_updated(self.mod, self.mainwindow.mc_version_select_box.currentText())
+                    # Мод прошел все проверки и обработки
+
+                    # Добавление мода в интерфейс
+                    self.mod['mod_slot'] = self.mainwindow.create_mod_slot(self.mod)
+                    if self.index == 99999999999999999999:
+                        self.mainwindow.mods.append(self.mod)
+                    else:
+                        self.mainwindow.mods.insert(self.index, self.mod)
+                    self.mainwindow.update_scroll_area()
+                    print_console('')
+
+        self.mainwindow.refresh_button.show()
+        if self.mainwindow.mods:
+            self.mainwindow.update_all_button.show()
+        print_console('\nRefreshing is done!\n')
 
 
 class UiMainWindow(object):
@@ -581,7 +681,16 @@ class UiMainWindow(object):
         MainWindow.setStyleSheet(stylesheet)
 
     def refresh_button_pressed(self):
-        self.refresh()
+        self.progress_bar_window = QtWidgets.QMainWindow()
+        self.progress_bar_window_ui = UiProgressBarWindow()
+        self.progress_bar_window_ui.setup_ui(self.progress_bar_window)
+        self.progress_bar_window.show()
+
+        self.thread = MyThread(mainwindow=self)
+        self.thread.start()
+
+        # sleep(5)
+        # self.refresh()
 
     def refresh(self, mod=False, index=99999999999999999999):
         # Установлен ли путь до папки MC
@@ -625,22 +734,21 @@ class UiMainWindow(object):
             # Если нужно обновить конкретный мод
             if mod:
                 file_name = mod['new_version_text']
-                file_path = os.path.join(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods', file_name)
+                file_path = os.path.join(data.user_mc_path, file_name)
                 files.append([file_name, file_path])
             else:
                 self.mods = []
+
                 # Проход через все файлы в попке mods
-                for file_name in os.listdir(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods'):
-                    file_path = os.path.join(r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods', file_name)
-
+                for file_name in os.listdir(data.user_mc_path):
                     # Это файл, а не папка?
-                    if not os.path.isfile(file_path):
-                        files.append([file_name, file_path])
+                    if os.path.isfile(os.path.join(data.user_mc_path, file_name)):
+                        files.append(file_name)
 
-            print(files)
+            self.progress_bar_window_ui.init_mods(files)
 
             for file in files:
-                mod = s.get_mod_info(file[1], file[0])
+                mod = s.get_mod_info(file)
 
                 # Достаточно ли информации чтобы работать с модом
                 if mod:
@@ -675,7 +783,7 @@ class UiMainWindow(object):
 
     def update_mod(self, mod):
         mod = s.update_mod(mod=mod,
-                           mods_dir=r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods',
+                           mods_dir=data.user_mc_path,
                            save_old_mod=self.save_check_box.isChecked())
 
         self.delete_mod(mod)
@@ -864,7 +972,7 @@ class UiMainWindow(object):
 
     def retranslate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
-        main_window.setWindowTitle(_translate("main_window", "MainWindow"))
+        main_window.setWindowTitle(_translate("main_window", "Minecraft Mods Updater"))
         self.title.setText(_translate("main_window", "Minecraft Mods Updater"))
         self.program_version.setText(_translate("main_window", "v0.1"))
         self.mods_button.setText(_translate("main_window", "Mods"))
@@ -885,6 +993,7 @@ class UiMainWindow(object):
 
 
 if __name__ == "__main__":
+    # If data.py is not empty
     try:
         data.dark_mode
     except:
