@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>623</width>
+    <width>579</width>
     <height>488</height>
    </rect>
   </property>
@@ -23,7 +23,9 @@
    <string notr="true">#main_widget {
 	border-radius: 0px;
 	background-color: rgb(50, 50, 50);
-}.QWidget {
+}
+
+.QWidget {
 	background-color: rgb(37, 37, 37);
 	border-radius:10px;
 }
@@ -334,7 +336,7 @@
        <number>0</number>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="mods_page">
        <property name="palette">
@@ -514,8 +516,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>575</width>
-                <height>184</height>
+                <width>531</width>
+                <height>198</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1053,6 +1055,12 @@ border-radius: 7px;</string>
          <widget class="QWidget" name="mods_widget" native="true">
           <property name="enabled">
            <bool>true</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
           <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
