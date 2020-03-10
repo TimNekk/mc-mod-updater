@@ -122,7 +122,6 @@ class UiProgressBarWindow(object):
         size_policy.setVerticalStretch(0)
         size_policy.setHeightForWidth(self.mods_widget.sizePolicy().hasHeightForWidth())
         self.mods_widget.setSizePolicy(size_policy)
-        self.mods_widget.setStyleSheet("background-color: red")
         self.mods_widget.setObjectName("mods_widget")
         self.mods_widget_vertical_layout = QtWidgets.QVBoxLayout(self.mods_widget)
         self.mods_widget_vertical_layout.setContentsMargins(0, 6, 0, 6)
@@ -162,6 +161,7 @@ class UiProgressBarWindow(object):
 
     def create_slot(self, mod):
         print(self.mods_widget.children())
+        print(mod)
 
         mod_slot = QtWidgets.QWidget(self.mods_widget)
         print(self.mods_widget.children())
