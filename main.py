@@ -26,6 +26,7 @@ def save_data_py():
     text += "console_font = '{}'\n".format(data.console_font)
     text += "save_old_mods = {}\n".format(data.save_old_mods)
     text += "dark_mode = {}\n".format(data.dark_mode)
+    text += "mods = []\n"
 
     with open('data.py', 'w') as file:
         file.write(text)
@@ -42,6 +43,8 @@ def reset_data_py():
     text += "console_font = '8'\n"
     text += "save_old_mods = False\n"
     text += "dark_mode = True\n"
+    text += "dark_mode = True\n"
+    text += "mods = []\n"
 
     with open('data.py', 'w') as file:
         file.write(text)
@@ -52,11 +55,14 @@ def reset_data_py():
     data.console_font = '8'
     data.save_old_mods = False
     data.dark_mode = True
+    data.mods = []
 
     print_console('data.py reset!\n')
 
 
-class MyThread(QThread):
+class UpdatingThread(QThread):
+    mod_added = pyqtSignal(dict)
+
     def __init__(self, mainwindow, mod=False, index=99999999999999999999):
         super().__init__()
         self.mainwindow = mainwindow
@@ -64,6 +70,7 @@ class MyThread(QThread):
         self.index = index
 
     def run(self):
+
         # Установлен ли путь до папки MC
         if not data.user_mc_path:
             print_console('Please, select MC directory!')
@@ -116,8 +123,9 @@ class MyThread(QThread):
                     if os.path.isfile(os.path.join(data.user_mc_path, file_name)):
                         files.append(file_name)
 
-            print(files)
-            self.mainwindow.progress_bar_window_ui.init_mods(files)
+            data.files = files
+            print('{data.files} 12312312123123123123123123123123123123123123123123123123123123123123123123123')
+            # self.mainwindow.progress_bar_window_ui.init_mods(files)
 
             for file in files:
                 # self.mainwindow.progress_bar_window_ui.accept_slot(file)
@@ -140,23 +148,47 @@ class MyThread(QThread):
                     # Мод прошел все проверки и обработки
 
                     # Добавление мода в интерфейс
-                    self.mod['mod_slot'] = self.mainwindow.create_mod_slot(self.mod)
-                    if self.index == 99999999999999999999:
-                        self.mainwindow.mods.append(self.mod)
-                    else:
-                        self.mainwindow.mods.insert(self.index, self.mod)
-                    self.mainwindow.update_scroll_area()
+                    # self.mod['mod_slot'] = self.mainwindow.create_mod_slot(self.mod)
+                    # if self.index == 99999999999999999999:
+                    #     self.mainwindow.mods.append(self.mod)
+                    # else:
+                    #     self.mainwindow.mods.insert(self.index, self.mod)
+                    # self.mainwindow.update_scroll_area()
+
+                    print(self.mod)
+                    self.mod_added.emit(self.mod)
+
                     print_console('')
 
         self.mainwindow.refresh_button.show()
         if self.mainwindow.mods:
             self.mainwindow.update_all_button.show()
+
+        sleep(100)
         print_console('\nRefreshing is done!\n')
+
+
+class ProgressBarThread(QThread):
+    def __init__(self, window_ui):
+        super().__init__()
+        self.ui = window_ui
+
+    def run(self):
+        print(self.ui.mods_widget)
+        while True:
+            print(data.files)
+            if data.files:
+                self.ui.init_mods(data.files)
+                break
+
+        # mod = data.current_mod
+        # while True:
 
 
 class UiMainWindow(object):
     def __init__(self):
         self.mods = []
+        self.old_mods = []
         self.color_dark_grey = 'rgb(37, 37, 37);'
         self.color_light_grey = 'rgb(50, 50, 50);'
         self.color_red = 'rgb(255, 47, 50)'
@@ -681,16 +713,39 @@ class UiMainWindow(object):
         MainWindow.setStyleSheet(stylesheet)
 
     def refresh_button_pressed(self):
+        # self.get_progress_bar_window()
+
+        # self.progress_bar_window_ui.init_mods(files)
+
+        self.updating_thread = UpdatingThread(self)
+        self.updating_thread.mod_added.connect(self.add_mod)
+        self.updating_thread.start()
+
+        # self.progress_bar_thread = ProgressBarThread(self.progress_bar_window_ui)
+        # self.progress_bar_thread.start()
+
+        # while True:
+        #     pass
+
+        # self.refresh()
+
+    def add_mod(self, mod):
+        self.mods.append(mod)
+
+        print('GGGGG')
+
+        try:
+            mod['mod_slot']
+        except KeyError:
+            mod['mod_slot'] = self.create_mod_slot(mod)
+
+        self.update_scroll_area()
+
+    def get_progress_bar_window(self):
         self.progress_bar_window = QtWidgets.QMainWindow()
         self.progress_bar_window_ui = UiProgressBarWindow()
         self.progress_bar_window_ui.setup_ui(self.progress_bar_window)
         self.progress_bar_window.show()
-
-        self.thread = MyThread(mainwindow=self)
-        self.thread.start()
-
-        # sleep(5)
-        # self.refresh()
 
     def refresh(self, mod=False, index=99999999999999999999):
         # Установлен ли путь до папки MC
@@ -701,12 +756,13 @@ class UiMainWindow(object):
 
         self.refresh_button.hide()
 
+        test = False
+
         print_console('Refreshing started!\n')
 
         # ---------------------------------------------------------------
         # Test
         # ---------------------------------------------------------------
-        test = False
         if test:
             mods = [{'name': 'Chisel', 'file_name': 'Chisel-MC1.12-0.1.0.22.jar',
                      'url': 'https://www.curseforge.com/minecraft/mc-mods/chisel/files/all', 'version': '0.1.0.22',
@@ -745,7 +801,7 @@ class UiMainWindow(object):
                     if os.path.isfile(os.path.join(data.user_mc_path, file_name)):
                         files.append(file_name)
 
-            self.progress_bar_window_ui.init_mods(files)
+            # self.progress_bar_window_ui.init_mods(files)
 
             for file in files:
                 mod = s.get_mod_info(file)
@@ -792,9 +848,12 @@ class UiMainWindow(object):
         self.refresh(mod, index)
 
     def update_scroll_area(self):
+        print(self.scroll_area_widget_contents_vertical_layout.children())
+        print(self.scroll_area_widget_contents.children())
         self.clear_scroll_area()
 
         for i, mod in enumerate(self.mods, 1):
+            print(mod)
             mod['mod_slot'].children()[1].setText(str(i))  # Установка нумерации
             self.scroll_area_widget_contents_vertical_layout.addWidget(mod['mod_slot'])  # Добавление слотов в виджет
         else:
@@ -803,6 +862,9 @@ class UiMainWindow(object):
         # Добавление спейсера
         spacer_item_4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.scroll_area_widget_contents_vertical_layout.addItem(spacer_item_4)
+
+        print(self.scroll_area_widget_contents_vertical_layout.children())
+        print(self.scroll_area_widget_contents.children())
 
     def clear_scroll_area(self):
         # Удаление всех слотов
@@ -969,6 +1031,7 @@ class UiMainWindow(object):
             # Обновление консоли
             if self.console_text_edit.toPlainText() != data.console_text:
                 self.console_text_edit.setPlainText(data.console_text)
+
 
     def retranslate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
