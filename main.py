@@ -7,7 +7,6 @@ import data
 from time import sleep
 import pathlib
 import subprocess
-from progressbar_window import UiProgressBarWindow
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
 
@@ -62,6 +61,7 @@ def reset_data_py():
 
 class UpdatingThread(QThread):
     mod_added = pyqtSignal(dict)
+    done = pyqtSignal(bool)
 
     def __init__(self, mainwindow, mod=False, index=99999999999999999999):
         super().__init__()
@@ -70,7 +70,6 @@ class UpdatingThread(QThread):
         self.index = index
 
     def run(self):
-
         # Установлен ли путь до папки MC
         if not data.user_mc_path:
             print_console('Please, select MC directory!')
@@ -78,6 +77,12 @@ class UpdatingThread(QThread):
             return False
 
         self.mainwindow.refresh_button.hide()
+        self.mainwindow.mods_button.setDisabled(True)
+        self.mainwindow.console_button.setDisabled(True)
+        self.mainwindow.settings_button.setDisabled(True)
+        self.mainwindow.mc_version_select_box.setDisabled(True)
+        self.mainwindow.progress_bar_widget.show()
+        self.mainwindow.mods_widget_horizontal_layout.removeItem(self.mainwindow.mods_widget_horizontal_layout_spacer_item)
 
         print_console('Refreshing started!\n')
 
@@ -123,12 +128,9 @@ class UpdatingThread(QThread):
                     if os.path.isfile(os.path.join(data.user_mc_path, file_name)):
                         files.append(file_name)
 
-            data.files = files
-            print('{data.files} 12312312123123123123123123123123123123123123123123123123123123123123123123123')
-            # self.mainwindow.progress_bar_window_ui.init_mods(files)
+                self.mainwindow.mods_count = len(files)
 
             for file in files:
-                # self.mainwindow.progress_bar_window_ui.accept_slot(file)
                 self.mod = s.get_mod_info(file)
 
                 # Достаточно ли информации чтобы работать с модом
@@ -147,42 +149,27 @@ class UpdatingThread(QThread):
                     self.mod = s.check_if_mod_is_updated(self.mod, self.mainwindow.mc_version_select_box.currentText())
                     # Мод прошел все проверки и обработки
 
-                    # Добавление мода в интерфейс
-                    # self.mod['mod_slot'] = self.mainwindow.create_mod_slot(self.mod)
-                    # if self.index == 99999999999999999999:
-                    #     self.mainwindow.mods.append(self.mod)
-                    # else:
-                    #     self.mainwindow.mods.insert(self.index, self.mod)
-                    # self.mainwindow.update_scroll_area()
-
-                    print(self.mod)
                     self.mod_added.emit(self.mod)
 
                     print_console('')
 
-        self.mainwindow.refresh_button.show()
-        if self.mainwindow.mods:
-            self.mainwindow.update_all_button.show()
+        # Уюирание прогресс бара
+        self.mainwindow.mods_count = 0
+        self.mainwindow.mods_done = 0
+        self.mainwindow.progress_bar_widget.hide()
 
-        sleep(100)
+
+        self.mainwindow.mods_button.setDisabled(False)
+        self.mainwindow.console_button.setDisabled(False)
+        self.mainwindow.settings_button.setDisabled(False)
+        self.mainwindow.mc_version_select_box.setDisabled(False)
+        self.mainwindow.mods_widget_horizontal_layout_spacer_item = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.mainwindow.mods_widget_horizontal_layout.insertItem(2, self.mainwindow.mods_widget_horizontal_layout_spacer_item)
+
+        # Показать кноки refresh и update_all
+        self.done.emit(True)
+
         print_console('\nRefreshing is done!\n')
-
-
-class ProgressBarThread(QThread):
-    def __init__(self, window_ui):
-        super().__init__()
-        self.ui = window_ui
-
-    def run(self):
-        print(self.ui.mods_widget)
-        while True:
-            print(data.files)
-            if data.files:
-                self.ui.init_mods(data.files)
-                break
-
-        # mod = data.current_mod
-        # while True:
 
 
 class UiMainWindow(object):
@@ -194,6 +181,8 @@ class UiMainWindow(object):
         self.color_red = 'rgb(255, 47, 50)'
         self.border_color = self.color_red
         self.stop_threads = False
+        self.mods_count = 0
+        self.mods_done = 0
 
     def setup_ui(self, main_window):
         main_window.setObjectName("main_window")
@@ -417,8 +406,8 @@ class UiMainWindow(object):
 
         self.mods_widget_horizontal_layout.addWidget(self.mc_version_select_box)
 
-        spacer_item_5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.mods_widget_horizontal_layout.addItem(spacer_item_5)
+        self.mods_widget_horizontal_layout_spacer_item = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.mods_widget_horizontal_layout.addItem(self.mods_widget_horizontal_layout_spacer_item)
 
         self.refresh_button = QtWidgets.QPushButton(self.mods_widget)
         self.refresh_button.setMinimumSize(QtCore.QSize(125, 40))
@@ -440,6 +429,30 @@ class UiMainWindow(object):
         self.update_all_button.setObjectName("update_all_button")
         self.update_all_button.hide()
         self.mods_widget_horizontal_layout.addWidget(self.update_all_button)
+
+        self.progress_bar_widget = QtWidgets.QWidget(self.mods_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Preferred)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.progress_bar_widget.sizePolicy().hasHeightForWidth())
+        self.progress_bar_widget.setSizePolicy(size_policy)
+        self.progress_bar_widget.setMaximumSize(QtCore.QSize(16777215, 40))
+        self.progress_bar_widget.setObjectName("progress_bar_widget")
+        self.progress_bar_widget_vertical_layout = QtWidgets.QVBoxLayout(self.progress_bar_widget)
+        self.progress_bar_widget_vertical_layout.setContentsMargins(5, 5, 5, 5)
+        self.progress_bar_widget_vertical_layout.setSpacing(0)
+        self.progress_bar_widget_vertical_layout.setObjectName("progress_bar_widget_vertical_layout")
+        self.progress_bar_widget.hide()
+
+        # main_widget -> stacked_widget -> mods_page -> mods_widget -> progress_bar_widget
+
+        self.progress_bar = QtWidgets.QWidget(self.progress_bar_widget)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        self.progress_bar.setSizePolicy(size_policy)
+        self.progress_bar.setFixedWidth(0)
+        self.progress_bar.setObjectName("progress_bar")
+        self.progress_bar_widget_vertical_layout.addWidget(self.progress_bar)
+        self.mods_widget_horizontal_layout.addWidget(self.progress_bar_widget)
 
         self.mods_page_vertical_layout.addWidget(self.mods_widget)
 
@@ -709,31 +722,30 @@ class UiMainWindow(object):
         stylesheet += ".Line {color: rgb(50, 50, 50)}"
         stylesheet += ".QLineEdit {background-color: rgb(50, 50, 50); border-radius: 5px; color: white; border:1px solid " + self.border_color + " }"
         stylesheet += "#font_size_label {font: 75 12pt \"Arial\"}"
+        stylesheet += "#progress_bar_widget {background-color:rgb(50, 50, 50);}"
+        stylesheet += "#progress_bar {background-color: rgb(255, 47, 50); border-radius: 7px;}"
 
         MainWindow.setStyleSheet(stylesheet)
 
     def refresh_button_pressed(self):
-        # self.get_progress_bar_window()
-
-        # self.progress_bar_window_ui.init_mods(files)
-
         self.updating_thread = UpdatingThread(self)
         self.updating_thread.mod_added.connect(self.add_mod)
+        self.updating_thread.done.connect(self.show_refresh_and_update_buttons)
         self.updating_thread.start()
 
-        # self.progress_bar_thread = ProgressBarThread(self.progress_bar_window_ui)
-        # self.progress_bar_thread.start()
+    def show_refresh_and_update_buttons(self):
+        self.refresh_button.show()
 
-        # while True:
-        #     pass
-
-        # self.refresh()
+        if self.mods:
+            self.update_all_button.show()
 
     def add_mod(self, mod):
+        self.mods_done += 1
+
+        # Добавление в self.mods
         self.mods.append(mod)
 
-        print('GGGGG')
-
+        # Создание Мод слота
         try:
             mod['mod_slot']
         except KeyError:
@@ -741,103 +753,8 @@ class UiMainWindow(object):
 
         self.update_scroll_area()
 
-    def get_progress_bar_window(self):
-        self.progress_bar_window = QtWidgets.QMainWindow()
-        self.progress_bar_window_ui = UiProgressBarWindow()
-        self.progress_bar_window_ui.setup_ui(self.progress_bar_window)
-        self.progress_bar_window.show()
-
-    def refresh(self, mod=False, index=99999999999999999999):
-        # Установлен ли путь до папки MC
-        if not data.user_mc_path:
-            print_console('Please, select MC directory!')
-            self.stacked_widget.setCurrentIndex(2)
-            return False
-
-        self.refresh_button.hide()
-
-        test = False
-
-        print_console('Refreshing started!\n')
-
-        # ---------------------------------------------------------------
-        # Test
-        # ---------------------------------------------------------------
-        if test:
-            mods = [{'name': 'Chisel', 'file_name': 'Chisel-MC1.12-0.1.0.22.jar',
-                     'url': 'https://www.curseforge.com/minecraft/mc-mods/chisel/files/all', 'version': '0.1.0.22',
-                     'mc_version': '1.12',
-                     'download_link': 'https://www.curseforge.com/minecraft/mc-mods/chisel/download/2813538/file',
-                     'new_version_text': 'Chisel - MC1.12.2-1.0.1.44', 'new_version': '1.0.1.44'},
-                    {'name': 'JourneyMap', 'file_name': 'journeymap-1.12.2-5.5.9.jar',
-                     'url': 'https://www.curseforge.com/minecraft/mc-mods/journeymap/files/all', 'version': '5.5.9',
-                     'mc_version': '1.12.2', 'download_link': False}, {'name': 'Test', 'file_name': 'Test.jar',
-                                                                       'url': 'https://www.curseforge.com/minecraft/mc-mods/Test/files/all',
-                                                                       'version': 'Test',
-                                                                       'mc_version': 'Test', 'download_link': False}]
-
-            for mod in mods:
-                mod['mod_slot'] = self.create_mod_slot(mod)
-                self.mods.append(mod)
-                self.update_scroll_area()
-        # ---------------------------------------------------------------
-        # Test
-        # ---------------------------------------------------------------
-
-        elif not test:
-            files = []
-
-            # Если нужно обновить конкретный мод
-            if mod:
-                file_name = mod['new_version_text']
-                file_path = os.path.join(data.user_mc_path, file_name)
-                files.append([file_name, file_path])
-            else:
-                self.mods = []
-
-                # Проход через все файлы в попке mods
-                for file_name in os.listdir(data.user_mc_path):
-                    # Это файл, а не папка?
-                    if os.path.isfile(os.path.join(data.user_mc_path, file_name)):
-                        files.append(file_name)
-
-            # self.progress_bar_window_ui.init_mods(files)
-
-            for file in files:
-                mod = s.get_mod_info(file)
-
-                # Достаточно ли информации чтобы работать с модом
-                if mod:
-                    print_console(mod['name'])
-                    mod = s.update_mod_url(mod, self.mc_version_select_box.currentText())
-
-                    # HTTP Error 429: Too Many Requests
-                    if mod == '429':
-                        break
-
-                    # Нашли ли ссылку на этот мод
-                    if not mod['url']:
-                        continue
-
-                    mod = s.check_if_mod_is_updated(mod, self.mc_version_select_box.currentText())
-                    # Мод прошел все проверки и обработки
-
-                    # Добавление мода в интерфейс
-                    mod['mod_slot'] = self.create_mod_slot(mod)
-                    if index == 99999999999999999999:
-                        self.mods.append(mod)
-                    else:
-                        self.mods.insert(index, mod)
-                    self.update_scroll_area()
-                    print_console('')
-
-
-        self.refresh_button.show()
-        if self.mods:
-            self.update_all_button.show()
-        print_console('\nRefreshing is done!\n')
-
     def update_mod(self, mod):
+        # TODO - Переделать под новый refresh
         mod = s.update_mod(mod=mod,
                            mods_dir=data.user_mc_path,
                            save_old_mod=self.save_check_box.isChecked())
@@ -848,8 +765,6 @@ class UiMainWindow(object):
         self.refresh(mod, index)
 
     def update_scroll_area(self):
-        print(self.scroll_area_widget_contents_vertical_layout.children())
-        print(self.scroll_area_widget_contents.children())
         self.clear_scroll_area()
 
         for i, mod in enumerate(self.mods, 1):
@@ -862,9 +777,6 @@ class UiMainWindow(object):
         # Добавление спейсера
         spacer_item_4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.scroll_area_widget_contents_vertical_layout.addItem(spacer_item_4)
-
-        print(self.scroll_area_widget_contents_vertical_layout.children())
-        print(self.scroll_area_widget_contents.children())
 
     def clear_scroll_area(self):
         # Удаление всех слотов
@@ -1032,6 +944,13 @@ class UiMainWindow(object):
             if self.console_text_edit.toPlainText() != data.console_text:
                 self.console_text_edit.setPlainText(data.console_text)
 
+            # Обновление прогресс бара
+            if self.mods_count and self.mods_count != self.mods_done:
+                try:
+                    progress_bar_max_width = self.progress_bar_widget.width() - 10
+                    self.progress_bar.setFixedWidth(progress_bar_max_width / self.mods_count * self.mods_done)
+                except:
+                    pass
 
     def retranslate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
