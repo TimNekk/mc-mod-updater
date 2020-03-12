@@ -26,6 +26,7 @@ def save_data_py():
     text += "save_old_mods = {}\n".format(data.save_old_mods)
     text += "dark_mode = {}\n".format(data.dark_mode)
     text += "mods = []\n"
+    text += "progress_bar_moves = 0\n"
 
     with open('data.py', 'w') as file:
         file.write(text)
@@ -44,6 +45,7 @@ def reset_data_py():
     text += "dark_mode = True\n"
     text += "dark_mode = True\n"
     text += "mods = []\n"
+    text += "progress_bar_moves = 0\n"
 
     with open('data.py', 'w') as file:
         file.write(text)
@@ -55,13 +57,14 @@ def reset_data_py():
     data.save_old_mods = False
     data.dark_mode = True
     data.mods = []
+    data.progress_bar_moves = 0
 
     print_console('data.py reset!\n')
 
 
 class RefreshingThread(QThread):
     mod_added = pyqtSignal(dict, str)
-    set_visible = pyqtSignal(bool, bool)
+    set_visible: pyqtSignal = pyqtSignal(bool, bool)
 
     def __init__(self, mainwindow, mod=False, index=''):
         super().__init__()
@@ -82,81 +85,71 @@ class RefreshingThread(QThread):
 
         print_console('Refreshing started!\n')
 
-        # ---------------------------------------------------------------
-        # Test
-        # ---------------------------------------------------------------
-        test = False
-        if test:
-            mods = [{'name': 'Chisel', 'file_name': 'Chisel-MC1.12-0.1.0.22.jar',
-                     'url': 'https://www.curseforge.com/minecraft/mc-mods/chisel/files/all', 'version': '0.1.0.22',
-                     'mc_version': '1.12',
-                     'download_link': 'https://www.curseforge.com/minecraft/mc-mods/chisel/download/2813538/file',
-                     'new_version_text': 'Chisel - MC1.12.2-1.0.1.44', 'new_version': '1.0.1.44'},
-                    {'name': 'JourneyMap', 'file_name': 'journeymap-1.12.2-5.5.9.jar',
-                     'url': 'https://www.curseforge.com/minecraft/mc-mods/journeymap/files/all', 'version': '5.5.9',
-                     'mc_version': '1.12.2', 'download_link': False}, {'name': 'Test', 'file_name': 'Test.jar',
-                                                                       'url': 'https://www.curseforge.com/minecraft/mc-mods/Test/files/all',
-                                                                       'version': 'Test',
-                                                                       'mc_version': 'Test', 'download_link': False}]
+        files = []
 
-            for mod in mods:
-                mod['mod_slot'] = self.create_mod_slot(mod)
-                self.mods.append(mod)
-                self.update_scroll_area()
-        # ---------------------------------------------------------------
-        # Test
-        # ---------------------------------------------------------------
+        # Если нужно обновить конкретный мод
+        if self.after_updating:
+            self.set_visible.emit(False, False)  # Скрыть элементы
 
-        elif not test:
-            files = []
+            file_name = self.mod['new_version_text']
+            files.append(file_name)
+        else:
+            self.mainwindow.progress_bar.setFixedWidth(0)
+            self.mainwindow.progress_bar_widget.setFixedWidth(self.mainwindow.main_widget.width() - 60)
 
-            # Если нужно обновить конкретный мод
-            if self.after_updating:
-                self.set_visible.emit(False, False)  # Скрыть элементы
+            # Добавление спейсеров побокам
+            spacer_item = QtWidgets.QSpacerItem(0, 0,
+                                                QtWidgets.QSizePolicy.Expanding,
+                                                QtWidgets.QSizePolicy.Minimum)
+            self.mainwindow.mods_widget_horizontal_layout.addItem(spacer_item)  # Добавить спейсер справа
+            self.mainwindow.mods_widget_horizontal_layout.insertItem(0, spacer_item)  # Добавить спейсер слева
 
-                file_name = self.mod['new_version_text']
-                files.append(file_name)
-            else:
-                self.set_visible.emit(False, True)  # Скрыть элементы
+            self.set_visible.emit(False, True)  # Скрыть элементы
 
-                self.mainwindow.mods = []
-                self.mainwindow.update_scroll_area()
+            self.mainwindow.mods = []
+            self.mainwindow.update_scroll_area()
 
-                # Проход через все файлы в попке mods
-                for file_name in os.listdir(data.user_mc_path):
-                    # Это файл, а не папка?
-                    if os.path.isfile(os.path.join(data.user_mc_path, file_name)):
-                        files.append(file_name)
+            # Проход через все файлы в попке mods
+            for file_name in os.listdir(data.user_mc_path):
+                # Это файл, а не папка?
+                if os.path.isfile(os.path.join(data.user_mc_path, file_name)):
+                    files.append(file_name)
 
-                self.mainwindow.mods_count = len(files)
+            # Запуск прогресс бара
+            self.mainwindow.mods_count = len(files)
 
-            for file in files:
-                self.mod = s.get_mod_info(file)
+        for file in files:
+            data.progress_bar_moves = 0
+            self.mod = s.get_mod_info(file)
+            data.progress_bar_moves += 3  # Увиличить прогресс бар на n
 
-                # Достаточно ли информации чтобы работать с модом
-                if self.mod:
-                    print_console(self.mod['name'])
-                    self.mod = s.update_mod_url(self.mod, self.mainwindow.mc_version_select_box.currentText())
+            # Достаточно ли информации чтобы работать с модом
+            if self.mod:
+                print_console(self.mod['name'])
+                self.mod = s.update_mod_url(self.mod, self.mainwindow.mc_version_select_box.currentText())
+                data.progress_bar_moves += 3  # Увиличить прогресс бар на n
 
-                    # HTTP Error 429: Too Many Requests
-                    if self.mod == '429':
-                        break
+                # HTTP Error 429: Too Many Requests
+                if self.mod == '429':
+                    break
 
-                    # Нашли ли ссылку на этот мод
-                    if not self.mod['url']:
-                        continue
+                # Нашли ли ссылку на этот мод
+                if not self.mod['url']:
+                    continue
 
-                    self.mod = s.check_if_mod_is_updated(self.mod, self.mainwindow.mc_version_select_box.currentText())
-                    # Мод прошел все проверки и обработки
+                self.mod = s.check_if_mod_is_updated(self.mod, self.mainwindow.mc_version_select_box.currentText())
+                data.progress_bar_moves += 1  # Увиличить прогресс бар на n
+                # Мод прошел все проверки и обработки
 
-                    self.mod_added.emit(self.mod, self.index)
+                self.mod_added.emit(self.mod, self.index)
 
-                    print_console('')
+                print_console('')
 
         # Показать элементы
         if self.after_updating:
             self.set_visible.emit(True, False)
         else:
+            self.mainwindow.mods_widget_horizontal_layout.removeItem(spacer_item)
             self.set_visible.emit(True, True)
 
         print_console('\nRefreshing is done!\n')
@@ -421,7 +414,8 @@ class UiMainWindow(object):
 
         self.mods_widget_horizontal_layout.addWidget(self.mc_version_select_box)
 
-        self.mods_widget_horizontal_layout_spacer_item = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.mods_widget_horizontal_layout_spacer_item = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding,
+                                                                               QtWidgets.QSizePolicy.Minimum)
         self.mods_widget_horizontal_layout.addItem(self.mods_widget_horizontal_layout_spacer_item)
 
         self.refresh_button = QtWidgets.QPushButton(self.mods_widget)
@@ -466,6 +460,7 @@ class UiMainWindow(object):
         self.progress_bar.setSizePolicy(size_policy)
         self.progress_bar.setFixedWidth(0)
         self.progress_bar.setObjectName("progress_bar")
+        self.progress_bar.setStyleSheet("background-color: rgb(255, 47, 50); border-radius: 1px;")
         self.progress_bar_widget_vertical_layout.addWidget(self.progress_bar)
         self.mods_widget_horizontal_layout.addWidget(self.progress_bar_widget)
 
@@ -708,7 +703,7 @@ class UiMainWindow(object):
             data.user_mc_path = filename + '/mods'
         else:
             print_console('\nInvalid Minecraft directory!')
-    
+
         # Сохранение data.py
         save_data_py()
 
@@ -738,7 +733,6 @@ class UiMainWindow(object):
         stylesheet += ".QLineEdit {background-color: rgb(50, 50, 50); border-radius: 5px; color: white; border:1px solid " + self.border_color + " }"
         stylesheet += "#font_size_label {font: 75 12pt \"Arial\"}"
         stylesheet += "#progress_bar_widget {background-color:rgb(50, 50, 50);}"
-        stylesheet += "#progress_bar {background-color: rgb(255, 47, 50); border-radius: 7px;}"
 
         MainWindow.setStyleSheet(stylesheet)
 
@@ -753,7 +747,7 @@ class UiMainWindow(object):
             self.mods_button.setDisabled(False)
             self.console_button.setDisabled(False)
             self.settings_button.setDisabled(False)
-            self.mc_version_select_box.setDisabled(False)
+
             if enable_progress_bar:
                 # Убирание прогресс бара
                 self.mods_count = 0
@@ -764,6 +758,9 @@ class UiMainWindow(object):
                                                                                        QtWidgets.QSizePolicy.Expanding,
                                                                                        QtWidgets.QSizePolicy.Minimum)
                 self.mods_widget_horizontal_layout.insertItem(2, self.mods_widget_horizontal_layout_spacer_item)
+
+            self.mc_version_select_box.show()
+            self.mc_version_label.show()
 
             self.refresh_button.show()
 
@@ -780,7 +777,8 @@ class UiMainWindow(object):
             self.mods_button.setDisabled(True)
             self.console_button.setDisabled(True)
             self.settings_button.setDisabled(True)
-            self.mc_version_select_box.setDisabled(True)
+            self.mc_version_select_box.hide()
+            self.mc_version_label.hide()
             if enable_progress_bar:
                 self.progress_bar_widget.show()
                 self.mods_widget_horizontal_layout.removeItem(self.mods_widget_horizontal_layout_spacer_item)
@@ -894,7 +892,8 @@ class UiMainWindow(object):
         mod_slot_name_button.setObjectName("mod_slot_1_name_button")
         mod_slot_name_button.setText(mod['name'])  # Присвиевание имени
         mod_slot_name_button.clicked.connect(
-            lambda: subprocess.Popen(r'explorer /select,"{}"'.format(os.path.join(data.user_mc_path, mod['file_name']))))
+            lambda: subprocess.Popen(
+                r'explorer /select,"{}"'.format(os.path.join(data.user_mc_path, mod['file_name']))))
         mod_slot_horizontal_layout.addWidget(mod_slot_name_button)
 
         spacer_item = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -970,17 +969,12 @@ class UiMainWindow(object):
             # Автосохранение версии MC
             if self.mc_version_select_box.currentText() != data.user_mc_version:
                 data.user_mc_version = self.mc_version_select_box.currentText()
-
-                # Сохранение data.py
-                save_data_py()
+                save_data_py()  # Сохранение data.py
 
             # Изменение значения рядом со слайдером
             if self.font_size_label.text() != str(self.horizontal_slider.value()):
-                # data.console_font = str(self.horizontal_slider.value())
                 self.font_size_label.setText(str(self.horizontal_slider.value()))
-
-                # Сохранение data.py
-                save_data_py()
+                save_data_py()  # Сохранение data.py
 
             # Пороверка изменения настроек и появление кнопки apply
             if self.save_check_box.isChecked() != data.save_old_mods:
@@ -1000,7 +994,24 @@ class UiMainWindow(object):
             if self.mods_count and self.mods_count != self.mods_done:
                 try:
                     progress_bar_max_width = self.progress_bar_widget.width() - 10
-                    self.progress_bar.setFixedWidth(progress_bar_max_width / self.mods_count * self.mods_done)
+                    main_part = progress_bar_max_width / self.mods_count * self.mods_done
+                    additional_part = progress_bar_max_width / self.mods_count * 0.05 * data.progress_bar_moves
+
+                    # Планое обновление прогресс бара
+                    while self.progress_bar.width() < round(main_part + additional_part):
+                        self.progress_bar.setFixedWidth(self.progress_bar.width() + progress_bar_max_width / 310)
+
+                        # Плавное изменение border-radius
+                        if 4 <= self.progress_bar.width() <= 6: border_radius = 2
+                        elif 6 <= self.progress_bar.width() <= 8: border_radius = 3
+                        elif 8 <= self.progress_bar.width() <= 10: border_radius = 4
+                        elif 10 <= self.progress_bar.width() <= 12: border_radius = 5
+                        elif 12 <= self.progress_bar.width() <= 14: border_radius = 6
+                        elif 14 <= self.progress_bar.width(): border_radius = 7
+
+                        self.progress_bar.setStyleSheet("background-color: rgb(255, 47, 50); border-radius: " + str(border_radius) + "px;")
+
+                        sleep(0.015)
                 except:
                     pass
 
