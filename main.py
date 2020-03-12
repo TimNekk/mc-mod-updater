@@ -59,15 +59,19 @@ def reset_data_py():
     print_console('data.py reset!\n')
 
 
-class UpdatingThread(QThread):
-    mod_added = pyqtSignal(dict)
-    done = pyqtSignal(bool)
+class RefreshingThread(QThread):
+    mod_added = pyqtSignal(dict, str)
+    set_visible = pyqtSignal(bool, bool)
 
-    def __init__(self, mainwindow, mod=False, index=99999999999999999999):
+    def __init__(self, mainwindow, mod=False, index=''):
         super().__init__()
         self.mainwindow = mainwindow
         self.mod = mod
         self.index = index
+        if self.mod:
+            self.after_updating = True
+        else:
+            self.after_updating = False
 
     def run(self):
         # Установлен ли путь до папки MC
@@ -75,14 +79,6 @@ class UpdatingThread(QThread):
             print_console('Please, select MC directory!')
             self.mainwindow.stacked_widget.setCurrentIndex(2)
             return False
-
-        self.mainwindow.refresh_button.hide()
-        self.mainwindow.mods_button.setDisabled(True)
-        self.mainwindow.console_button.setDisabled(True)
-        self.mainwindow.settings_button.setDisabled(True)
-        self.mainwindow.mc_version_select_box.setDisabled(True)
-        self.mainwindow.progress_bar_widget.show()
-        self.mainwindow.mods_widget_horizontal_layout.removeItem(self.mainwindow.mods_widget_horizontal_layout_spacer_item)
 
         print_console('Refreshing started!\n')
 
@@ -115,12 +111,16 @@ class UpdatingThread(QThread):
             files = []
 
             # Если нужно обновить конкретный мод
-            if self.mod:
+            if self.after_updating:
+                self.set_visible.emit(False, False)  # Скрыть элементы
+
                 file_name = self.mod['new_version_text']
-                file_path = os.path.join(data.user_mc_path, file_name)
-                files.append([file_name, file_path])
+                files.append(file_name)
             else:
+                self.set_visible.emit(False, True)  # Скрыть элементы
+
                 self.mainwindow.mods = []
+                self.mainwindow.update_scroll_area()
 
                 # Проход через все файлы в попке mods
                 for file_name in os.listdir(data.user_mc_path):
@@ -149,27 +149,42 @@ class UpdatingThread(QThread):
                     self.mod = s.check_if_mod_is_updated(self.mod, self.mainwindow.mc_version_select_box.currentText())
                     # Мод прошел все проверки и обработки
 
-                    self.mod_added.emit(self.mod)
+                    self.mod_added.emit(self.mod, self.index)
 
                     print_console('')
 
-        # Уюирание прогресс бара
-        self.mainwindow.mods_count = 0
-        self.mainwindow.mods_done = 0
-        self.mainwindow.progress_bar_widget.hide()
-
-
-        self.mainwindow.mods_button.setDisabled(False)
-        self.mainwindow.console_button.setDisabled(False)
-        self.mainwindow.settings_button.setDisabled(False)
-        self.mainwindow.mc_version_select_box.setDisabled(False)
-        self.mainwindow.mods_widget_horizontal_layout_spacer_item = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.mainwindow.mods_widget_horizontal_layout.insertItem(2, self.mainwindow.mods_widget_horizontal_layout_spacer_item)
-
-        # Показать кноки refresh и update_all
-        self.done.emit(True)
+        # Показать элементы
+        if self.after_updating:
+            self.set_visible.emit(True, False)
+        else:
+            self.set_visible.emit(True, True)
 
         print_console('\nRefreshing is done!\n')
+
+
+class UpdatingThread(QThread):
+    delete_mod = pyqtSignal(dict)
+    refreshing_thread = pyqtSignal(dict, str)
+    set_visible = pyqtSignal(bool, bool)
+
+    def __init__(self, mod, save_old_mod, mods):
+        super().__init__()
+        self.mod = mod
+        self.save_old_mod = save_old_mod
+        self.mods = mods
+
+    def run(self):
+        self.set_visible.emit(False, False)
+
+        index = str(self.mods.index(self.mod))
+
+        mod = s.update_mod(mod=self.mod,
+                           mods_dir=data.user_mc_path,
+                           save_old_mod=self.save_old_mod)
+
+        self.delete_mod.emit(self.mod)
+        # self.refreshing_thread.emit(mod, str(self.mods.index(mod)))
+        self.refreshing_thread.emit(mod, index)
 
 
 class UiMainWindow(object):
@@ -414,7 +429,7 @@ class UiMainWindow(object):
         self.refresh_button.setMaximumSize(QtCore.QSize(125, 40))
         self.refresh_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.refresh_button.setObjectName("refresh_button")
-        self.refresh_button.clicked.connect(self.refresh_button_pressed)
+        self.refresh_button.clicked.connect(self.start_refresh_thread)
         self.mods_widget_horizontal_layout.addWidget(self.refresh_button)
 
         self.update_all_button = QtWidgets.QPushButton(self.mods_widget)
@@ -727,23 +742,62 @@ class UiMainWindow(object):
 
         MainWindow.setStyleSheet(stylesheet)
 
-    def refresh_button_pressed(self):
-        self.updating_thread = UpdatingThread(self)
-        self.updating_thread.mod_added.connect(self.add_mod)
-        self.updating_thread.done.connect(self.show_refresh_and_update_buttons)
-        self.updating_thread.start()
+    def start_refresh_thread(self, mod=False, index=''):
+        self.refreshing_thread = RefreshingThread(self, mod, index)
+        self.refreshing_thread.mod_added.connect(self.add_mod)
+        self.refreshing_thread.set_visible.connect(self.set_visibility_while_refreshing)
+        self.refreshing_thread.start()
 
-    def show_refresh_and_update_buttons(self):
-        self.refresh_button.show()
+    def set_visibility_while_refreshing(self, visible, enable_progress_bar):
+        if visible:
+            self.mods_button.setDisabled(False)
+            self.console_button.setDisabled(False)
+            self.settings_button.setDisabled(False)
+            self.mc_version_select_box.setDisabled(False)
+            if enable_progress_bar:
+                # Убирание прогресс бара
+                self.mods_count = 0
+                self.mods_done = 0
+                self.progress_bar_widget.hide()
 
-        if self.mods:
-            self.update_all_button.show()
+                self.mods_widget_horizontal_layout_spacer_item = QtWidgets.QSpacerItem(0, 0,
+                                                                                       QtWidgets.QSizePolicy.Expanding,
+                                                                                       QtWidgets.QSizePolicy.Minimum)
+                self.mods_widget_horizontal_layout.insertItem(2, self.mods_widget_horizontal_layout_spacer_item)
 
-    def add_mod(self, mod):
-        self.mods_done += 1
+            self.refresh_button.show()
 
-        # Добавление в self.mods
-        self.mods.append(mod)
+            if self.mods:
+                self.update_all_button.show()
+
+            # Показать кнопки update
+            for mod in self.mods:
+                mod['mod_slot'].children()[4].show()
+
+        else:
+            self.update_all_button.hide()
+            self.refresh_button.hide()
+            self.mods_button.setDisabled(True)
+            self.console_button.setDisabled(True)
+            self.settings_button.setDisabled(True)
+            self.mc_version_select_box.setDisabled(True)
+            if enable_progress_bar:
+                self.progress_bar_widget.show()
+                self.mods_widget_horizontal_layout.removeItem(self.mods_widget_horizontal_layout_spacer_item)
+            else:
+                for mod in self.mods:
+                    if mod['mod_slot'].children()[4].text() == 'Update':
+                        mod['mod_slot'].children()[4].hide()
+
+    def add_mod(self, mod, index):
+        # Нужно ли просто добавить мод или вставить его
+        if index:
+            # Добавление в self.mods
+            self.mods.insert(int(index), mod)
+        else:
+            self.mods_done += 1
+            # Добавление в self.mods
+            self.mods.append(mod)
 
         # Создание Мод слота
         try:
@@ -755,20 +809,17 @@ class UiMainWindow(object):
 
     def update_mod(self, mod):
         # TODO - Переделать под новый refresh
-        mod = s.update_mod(mod=mod,
-                           mods_dir=data.user_mc_path,
-                           save_old_mod=self.save_check_box.isChecked())
 
-        self.delete_mod(mod)
-
-        index = self.mods.index(mod)
-        self.refresh(mod, index)
+        updating_thread = UpdatingThread(mod, self.save_check_box.isChecked(), self.mods)
+        updating_thread.delete_mod.connect(self.delete_mod)
+        updating_thread.refreshing_thread.connect(self.start_refresh_thread)
+        updating_thread.set_visible.connect(self.set_visibility_while_refreshing)
+        updating_thread.start()
 
     def update_scroll_area(self):
         self.clear_scroll_area()
 
         for i, mod in enumerate(self.mods, 1):
-            print(mod)
             mod['mod_slot'].children()[1].setText(str(i))  # Установка нумерации
             self.scroll_area_widget_contents_vertical_layout.addWidget(mod['mod_slot'])  # Добавление слотов в виджет
         else:
@@ -789,7 +840,7 @@ class UiMainWindow(object):
         self.mods.remove(mod)  # Удаление из self.mods
         mod['mod_slot'].setParent(None)  # Удаление слота
         self.update_scroll_area()  # Изменение нумерации слотов
-        s.delete_mod(mod)
+        # s.delete_mod(mod)
 
     def create_mod_slot(self, mod):
         # Создание слота
@@ -866,6 +917,7 @@ class UiMainWindow(object):
             mod_slot_update_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
             mod_slot_update_button.setObjectName("mod_slot_1_update_button")
             mod_slot_update_button.setText("Update")
+            mod_slot_update_button.hide()
 
             mod_slot_update_button.clicked.connect(lambda: self.update_mod(mod))  # Подключение кнопки к функции
             mod_slot_horizontal_layout.addWidget(mod_slot_update_button)
