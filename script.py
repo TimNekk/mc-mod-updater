@@ -133,11 +133,13 @@ def transform_files_urls(urls):
 
 def get_mod_url(mod_name, user_mc_version):
     urls = transform_files_urls(search_with_yandex('curseforge.com ' + mod_name))
+    data.progress_bar_moves += 1  # Увиличить прогресс бар на n
 
     scraper = cfscrape.create_scraper()
 
     for _ in range(0, 2):
         for url in urls:
+            data.progress_bar_moves += 1  # Увиличить прогресс бар на n
             r = scraper.get(url)
             soup = BS(r.content, 'html.parser')
             try:
@@ -176,10 +178,11 @@ def get_mod_url(mod_name, user_mc_version):
     return False
 
 
-def update_mod_url(mod, user_mc_version):
+def update_mod_url(mod: object, user_mc_version: object) -> object:
     if not mod['url']:
         try:
             url = get_mod_url(mod['name'], user_mc_version)
+            data.progress_bar_moves += 1  # Увиличить прогресс бар на n
 
             if url:
                 mod['url'] = url
@@ -203,6 +206,7 @@ def check_if_mod_is_updated(mod, user_mc_version):
         r = scraper.get(mod['url'])
     except:
         return False
+    data.progress_bar_moves += 1  # Увиличить прогресс бар на n
 
     soup = BS(r.content, 'html.parser')
 
@@ -211,6 +215,8 @@ def check_if_mod_is_updated(mod, user_mc_version):
 
     try:
         for row in mod_versions:
+            data.progress_bar_moves += 1  # Увиличить прогресс бар на n
+
             mc_version_container = row.select('.listing-container.listing-container-table:'
                                               'not(.custom-formatting) table tbody tr td')[4]
 
@@ -242,6 +248,8 @@ def check_if_mod_is_updated(mod, user_mc_version):
     except:
         pass
 
+    data.progress_bar_moves += 1  # Увиличить прогресс бар на n
+
     version_container = top_row.select('.listing-container.listing-container-table:'
                                        'not(.custom-formatting) table tbody tr td')[1]
 
@@ -258,6 +266,7 @@ def check_if_mod_is_updated(mod, user_mc_version):
         mod['download_link'] = False
 
         print_console('Mod is up to date')
+        data.progress_bar_moves += 1  # Увиличить прогресс бар на n
 
         return mod
 
@@ -303,6 +312,8 @@ def check_if_mod_is_updated(mod, user_mc_version):
             print_console(                  'Mod can be updated ({0}) -> ({1})'.format(mod['version'], new_version)
                 )
             print(mod)
+            data.progress_bar_moves += 1  # Увиличить прогресс бар на n
+
             return mod
 
 

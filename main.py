@@ -94,6 +94,10 @@ class RefreshingThread(QThread):
             file_name = self.mod['new_version_text']
             files.append(file_name)
         else:
+            # Надпись Refreshing...
+            self.mainwindow.title.setText('Refreshing...')
+            self.mainwindow.program_version.hide()
+
             self.mainwindow.progress_bar.setFixedWidth(0)
             self.mainwindow.progress_bar_widget.setFixedWidth(self.mainwindow.main_widget.width() - 60)
 
@@ -141,7 +145,8 @@ class RefreshingThread(QThread):
                 data.progress_bar_moves += 1  # Увиличить прогресс бар на n
                 # Мод прошел все проверки и обработки
 
-                self.mod_added.emit(self.mod, self.index)
+                if self.mod:
+                    self.mod_added.emit(self.mod, self.index)
 
                 print_console('')
 
@@ -151,6 +156,11 @@ class RefreshingThread(QThread):
         else:
             self.mainwindow.mods_widget_horizontal_layout.removeItem(spacer_item)
             self.set_visible.emit(True, True)
+
+        # Надпись Refreshing...
+        self.mainwindow.title.setText('Minecraft Mods Updater')
+        self.mainwindow.program_version.show()
+        sleep(1)
 
         print_console('\nRefreshing is done!\n')
 
@@ -167,16 +177,21 @@ class UpdatingThread(QThread):
         self.mods = mods
 
     def run(self):
+        print(1)
         self.set_visible.emit(False, False)
 
         index = str(self.mods.index(self.mod))
+        print(1)
 
         mod = s.update_mod(mod=self.mod,
                            mods_dir=data.user_mc_path,
                            save_old_mod=self.save_old_mod)
+        print(1)
 
         self.delete_mod.emit(self.mod)
         # self.refreshing_thread.emit(mod, str(self.mods.index(mod)))
+        print(1)
+
         self.refreshing_thread.emit(mod, index)
 
 
@@ -370,17 +385,13 @@ class UiMainWindow(object):
         self.scroll_area_widget_contents_vertical_layout = QtWidgets.QVBoxLayout(self.scroll_area_widget_contents)
         self.scroll_area_widget_contents_vertical_layout.setObjectName("scroll_area_widget_contents_vertical_layout")
 
-        # spacer_item_4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        # self.scroll_area_widget_contents_vertical_layout.addItem(spacer_item_4)
-
         self.mods_page_vertical_layout.addWidget(self.update_widget)
 
         # main_widget -> stacked_widget -> mods_page -> mods_widget
 
         self.mods_widget = QtWidgets.QWidget(self.mods_page)
-        self.mods_widget.setMaximumSize(QtCore.QSize(0, 84))
-        self.mods_widget.setEnabled(True)
-        self.mods_widget.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.mods_widget.setFixedHeight(84)
+        # self.mods_widget.setMinimumSize(QtCore.QSize(0, 84))
         self.mods_widget.setObjectName("mods_widget")
 
         self.mods_widget_horizontal_layout = QtWidgets.QHBoxLayout(self.mods_widget)
@@ -426,19 +437,6 @@ class UiMainWindow(object):
         self.refresh_button.setObjectName("refresh_button")
         self.refresh_button.clicked.connect(self.start_refresh_thread)
         self.mods_widget_horizontal_layout.addWidget(self.refresh_button)
-
-        self.update_all_button = QtWidgets.QPushButton(self.mods_widget)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-        size_policy.setHorizontalStretch(0)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.update_all_button.sizePolicy().hasHeightForWidth())
-        self.update_all_button.setSizePolicy(size_policy)
-        self.update_all_button.setMinimumSize(QtCore.QSize(125, 40))
-        self.update_all_button.setMaximumSize(QtCore.QSize(125, 40))
-        self.update_all_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.update_all_button.setObjectName("update_all_button")
-        self.update_all_button.hide()
-        self.mods_widget_horizontal_layout.addWidget(self.update_all_button)
 
         self.progress_bar_widget = QtWidgets.QWidget(self.mods_widget)
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Preferred)
@@ -797,15 +795,11 @@ class UiMainWindow(object):
 
             self.refresh_button.show()
 
-            if self.mods:
-                self.update_all_button.show()
-
             # Показать кнопки update
             for mod in self.mods:
                 mod['mod_slot'].children()[4].show()
 
         else:
-            self.update_all_button.hide()
             self.refresh_button.hide()
             self.mods_button.setDisabled(True)
             self.console_button.setDisabled(True)
@@ -839,7 +833,9 @@ class UiMainWindow(object):
         self.update_scroll_area()
 
     def update_mod(self, mod):
-        # TODO - Переделать под новый refresh
+        # Надпись Updating mod...
+        self.title.setText('Updating mod...')
+        self.program_version.hide()
 
         updating_thread = UpdatingThread(mod, self.save_check_box.isChecked(), self.mods)
         updating_thread.delete_mod.connect(self.delete_mod)
@@ -853,8 +849,6 @@ class UiMainWindow(object):
         for i, mod in enumerate(self.mods, 1):
             mod['mod_slot'].children()[1].setText(str(i))  # Установка нумерации
             self.scroll_area_widget_contents_vertical_layout.addWidget(mod['mod_slot'])  # Добавление слотов в виджет
-        else:
-            self.update_all_button.hide()
 
         # Добавление спейсера
         spacer_item_4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
@@ -1026,8 +1020,9 @@ class UiMainWindow(object):
                 self.console_text_edit.setPlainText(data.console_text)
 
             # Обновление прогресс бара
-            if self.mods_count and self.mods_count != self.mods_done:
-                try:
+
+            try:
+                if self.mods_count and self.mods_count != self.mods_done:
                     progress_bar_max_width = self.progress_bar_widget.width() - 10
                     main_part = progress_bar_max_width / self.mods_count * self.mods_done
                     additional_part = progress_bar_max_width / self.mods_count * 0.05 * data.progress_bar_moves
@@ -1037,6 +1032,7 @@ class UiMainWindow(object):
                         self.progress_bar.setFixedWidth(self.progress_bar.width() + progress_bar_max_width / 310)
 
                         # Плавное изменение border-radius
+                        border_radius = 0
                         if 4 <= self.progress_bar.width() <= 6:
                             border_radius = 2
                         elif 6 <= self.progress_bar.width() <= 8:
@@ -1053,9 +1049,14 @@ class UiMainWindow(object):
                         self.progress_bar.setStyleSheet(
                             "background-color: rgb(255, 47, 50); border-radius: " + str(border_radius) + "px;")
 
+                        # self.progress_bar.setStyleSheet(
+                        #     "background-color: rgb(255, 47, 50); border-radius: 7px;")
+
                         sleep(0.015)
-                except:
-                    pass
+            except:
+                print(1)
+
+            sleep(0.1)
 
     def retranslate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
@@ -1067,7 +1068,6 @@ class UiMainWindow(object):
         self.settings_button.setText(_translate("main_window", "Settings"))
         self.mc_version_label.setText(_translate("main_window", "Your MC version"))
         self.refresh_button.setText(_translate("main_window", "Refresh"))
-        self.update_all_button.setText(_translate("main_window", "Update all"))
         self.console_text_edit.setPlainText(_translate("main_window", "Console Text"))
         self.path_line_edit.setPlaceholderText(_translate("main_window", "Minecraft Path"))
         self.browse_button.setText(_translate("main_window", "Browse"))
