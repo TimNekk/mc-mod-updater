@@ -191,6 +191,7 @@ class UiMainWindow(object):
         self.stop_threads = False
         self.mods_count = 0
         self.mods_done = 0
+        self.colors = ['rgb(60, 60, 60)', 'rgb(50, 50, 50)', 'rgb(37, 37, 37)', 'white', 'rgb(165, 165, 165)']
 
     def setup_ui(self, main_window):
         main_window.setObjectName("main_window")
@@ -718,21 +719,53 @@ class UiMainWindow(object):
             self.path_line_edit.clear()
             self.border_color = self.color_red
 
-        stylesheet = "#main_widget {border-radius: 0px; background-color: rgb(50, 50, 50)}"
-        stylesheet += ".QWidget {background-color: rgb(37, 37, 37); border-radius:10px}"
-        stylesheet += ".QPushButton {background-color:rgb(50, 50, 50); transition:background-color; color: white; border-radius: 10px; font: 10pt \"Arial\"}"
-        stylesheet += ".QPushButton:hover {background-color:rgb(60, 60, 60)}"
-        stylesheet += ".QLabel, .QCheckBox {color: white; font: 10pt \"Arial\"}"
+        # Выбор цветовой темы
+        if self.dark_check_box.isChecked():
+            self.colors = ['rgb(60, 60, 60)', 'rgb(50, 50, 50)', 'rgb(37, 37, 37)', 'white', 'rgb(165, 165, 165)']
+            self.line.setFrameShadow(QtWidgets.QFrame.Plain)
+            self.line_2.setFrameShadow(QtWidgets.QFrame.Plain)
+            self.line_3.setFrameShadow(QtWidgets.QFrame.Plain)
+        else:
+            self.colors = ['rgb(225, 225, 225)', 'rgb(235, 235, 235)', 'rgb(200, 200, 200)', 'rgb(30, 30, 30)',
+                           'rgb(90, 90, 90)']
+            self.line.setFrameShadow(QtWidgets.QFrame.Raised)
+            self.line_2.setFrameShadow(QtWidgets.QFrame.Raised)
+            self.line_3.setFrameShadow(QtWidgets.QFrame.Raised)
+        for mod in self.mods:
+            mod['mod_slot'].setStyleSheet(
+                "border-radius: 10px;\nborder: 1px solid " + self.colors[1] + ";\nborder-radius: 7px;")
+            mod['mod_slot'].children()[1].setStyleSheet("background-color: " + self.colors[1] + ";")
+            mod['mod_slot'].children()[2].setStyleSheet("* {\n"
+                                                        "    background-color: none;\n"
+                                                        "    border: none;\n"
+                                                        "    color: " + self.colors[3] + ";\n"
+                                                                                         "}\n"
+                                                                                         "\n"
+                                                                                         "*:hover {\n"
+                                                                                         "    background-color: none;\n"
+                                                                                         "    color: " + self.colors[
+                                                            4] + ";\n"
+                                                                 "}")
+
+        stylesheet = "#main_widget {border-radius: 0px; background-color: " + self.colors[1] + "}"
+        stylesheet += ".QWidget {background-color: " + self.colors[2] + "; border-radius:10px}"
+        stylesheet += ".QPushButton {background-color:" + self.colors[1] + "; transition:background-color; color: " + \
+                      self.colors[3] + "; border-radius: 10px; font: 10pt \"Arial\"}"
+        stylesheet += ".QPushButton:hover {background-color:" + self.colors[0] + "}"
+        stylesheet += ".QLabel, .QCheckBox {color: " + self.colors[3] + "; font: 10pt \"Arial\"}"
         stylesheet += "#title {font: 75 18pt \"Arial\"}"
         stylesheet += "#program_version {margin-top: 6px}"
-        stylesheet += ".QComboBox {background-color: rgb(50, 50, 50); color: white; border-radius: 10px; font: 10pt \"Arial\"}"
-        stylesheet += ".QScrollArea {border-radius:10px 10px 0px 0px; background-color: rgb(37, 37, 37)}"
-        stylesheet += "#mods_page, #console_page, #settings_page {background-color: rgb(50, 50, 50)}"
-        stylesheet += ".QPlainTextEdit {background-color: rgb(37, 37, 37); color: white; font: " + data.console_font + "pt \"Arial\"; border: 1px solid rgb(50, 50, 50); border-radius: 10px;}"
-        stylesheet += ".Line {color: rgb(50, 50, 50)}"
-        stylesheet += ".QLineEdit {background-color: rgb(50, 50, 50); border-radius: 5px; color: white; border:1px solid " + self.border_color + " }"
+        stylesheet += ".QComboBox {background-color: " + self.colors[1] + "; color: " + self.colors[
+            3] + "; border-radius: 10px; font: 10pt \"Arial\"}"
+        stylesheet += ".QScrollArea {border-radius:10px 10px 0px 0px; background-color: " + self.colors[2] + "}"
+        stylesheet += "#mods_page, #console_page, #settings_page {background-color: " + self.colors[1] + "}"
+        stylesheet += ".QPlainTextEdit {background-color: " + self.colors[2] + "; color: " + self.colors[
+            3] + "; font: " + data.console_font + "pt \"Arial\"; border: 1px solid " + self.colors[
+                          1] + "; border-radius: 10px;}"
+        stylesheet += ".Line {color: " + self.colors[1] + "}"
+        stylesheet += ".QLineEdit {background-color: " + self.colors[1] + "; border-radius: 5px; color: " + self.colors[
+            3] + "; border:1px solid " + self.border_color + " }"
         stylesheet += "#font_size_label {font: 75 12pt \"Arial\"}"
-        stylesheet += "#progress_bar_widget {background-color:rgb(50, 50, 50);}"
 
         MainWindow.setStyleSheet(stylesheet)
 
@@ -849,8 +882,8 @@ class UiMainWindow(object):
         size_policy.setHeightForWidth(mod_slot.sizePolicy().hasHeightForWidth())
         mod_slot.setSizePolicy(size_policy)
         mod_slot.setStyleSheet("border-radius: 10px;\n"
-                               "border: 1px solid rgb(50, 50, 50);\n"
-                               "border-radius: 7px;")
+                               "border: 1px solid " + self.colors[1] + ";\n"
+                                                                       "border-radius: 7px;")
         mod_slot.setFrameShape(QtWidgets.QFrame.StyledPanel)
         mod_slot.setFrameShadow(QtWidgets.QFrame.Raised)
         mod_slot.setObjectName("mod_slot")
@@ -864,7 +897,7 @@ class UiMainWindow(object):
         mod_slot_count_label = QtWidgets.QLabel(mod_slot)
         mod_slot_count_label.setMinimumSize(QtCore.QSize(20, 20))
         mod_slot_count_label.setMaximumSize(QtCore.QSize(20, 20))
-        mod_slot_count_label.setStyleSheet("background-color: rgb(50, 50, 50);")
+        mod_slot_count_label.setStyleSheet("background-color: " + self.colors[1] + ";")
         mod_slot_count_label.setAlignment(QtCore.Qt.AlignCenter)
         mod_slot_count_label.setObjectName("mod_slot_1_count_label")
         mod_slot_count_label.setText('#')
@@ -882,13 +915,13 @@ class UiMainWindow(object):
         mod_slot_name_button.setStyleSheet("* {\n"
                                            "    background-color: none;\n"
                                            "    border: none;\n"
-                                           "    color: white;\n"
-                                           "}\n"
-                                           "\n"
-                                           "*:hover {\n"
-                                           "    background-color: none;\n"
-                                           "    color: rgb(165, 165, 165)\n"
-                                           "}")
+                                           "    color: " + self.colors[3] + ";\n"
+                                                                            "}\n"
+                                                                            "\n"
+                                                                            "*:hover {\n"
+                                                                            "    background-color: none;\n"
+                                                                            "    color: " + self.colors[4] + ";\n"
+                                                                                                             "}")
         mod_slot_name_button.setObjectName("mod_slot_1_name_button")
         mod_slot_name_button.setText(mod['name'])  # Присвиевание имени
         mod_slot_name_button.clicked.connect(
@@ -946,6 +979,8 @@ class UiMainWindow(object):
 
         self.apply_button.hide()
 
+        self.update_ui()
+
         self.start_initial_thread()
 
     def reset_settings(self):
@@ -997,19 +1032,26 @@ class UiMainWindow(object):
                     main_part = progress_bar_max_width / self.mods_count * self.mods_done
                     additional_part = progress_bar_max_width / self.mods_count * 0.05 * data.progress_bar_moves
 
-                    # Планое обновление прогресс бара
+                    # Плавное обновление прогресс бара
                     while self.progress_bar.width() < round(main_part + additional_part):
                         self.progress_bar.setFixedWidth(self.progress_bar.width() + progress_bar_max_width / 310)
 
                         # Плавное изменение border-radius
-                        if 4 <= self.progress_bar.width() <= 6: border_radius = 2
-                        elif 6 <= self.progress_bar.width() <= 8: border_radius = 3
-                        elif 8 <= self.progress_bar.width() <= 10: border_radius = 4
-                        elif 10 <= self.progress_bar.width() <= 12: border_radius = 5
-                        elif 12 <= self.progress_bar.width() <= 14: border_radius = 6
-                        elif 14 <= self.progress_bar.width(): border_radius = 7
+                        if 4 <= self.progress_bar.width() <= 6:
+                            border_radius = 2
+                        elif 6 <= self.progress_bar.width() <= 8:
+                            border_radius = 3
+                        elif 8 <= self.progress_bar.width() <= 10:
+                            border_radius = 4
+                        elif 10 <= self.progress_bar.width() <= 12:
+                            border_radius = 5
+                        elif 12 <= self.progress_bar.width() <= 14:
+                            border_radius = 6
+                        elif 14 <= self.progress_bar.width():
+                            border_radius = 7
 
-                        self.progress_bar.setStyleSheet("background-color: rgb(255, 47, 50); border-radius: " + str(border_radius) + "px;")
+                        self.progress_bar.setStyleSheet(
+                            "background-color: rgb(255, 47, 50); border-radius: " + str(border_radius) + "px;")
 
                         sleep(0.015)
                 except:
