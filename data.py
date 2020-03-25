@@ -4,5 +4,3 @@ user_mc_path = r'C:\Users\Tim PC\AppData\Roaming\.minecraft\mods'
 console_font = '8'
 save_old_mods = False
 dark_mode = True
-mods = []
-progress_bar_moves = 0
