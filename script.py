@@ -3,15 +3,12 @@ import re
 import os
 import yandex_search
 import pickle
-from colorama import init, Fore
 from urllib import error
 from bs4 import BeautifulSoup as BS
 import cfscrape
 import requests
 import shutil
 import data
-import pathlib
-init()
 
 # noinspection PyBroadException
 
@@ -20,9 +17,9 @@ yandex = yandex_search.Yandex(api_user='megamax00', api_key='03.907013875:190872
 
 
 def unzip(file_path):
-    archive = zipfile.ZipFile(file_path, 'r')
     try:
-        archive.extract('mcmod.info')
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            zip_ref.extract('mcmod.info')
     except KeyError:
         return False
     return True
@@ -32,7 +29,6 @@ def get_mod_info(file_name):
     if unzip(os.path.join(data.user_mc_path, file_name)):
         with open('mcmod.info', 'rb') as file:
             file_data = str(file.read())
-
         mod = {
             'name': re.findall(r'[\"][\w].+', re.findall(r'name.{4}[\w\s]+', file_data)[0])[0][1::],
             'file_name': file_name,
@@ -40,14 +36,14 @@ def get_mod_info(file_name):
         }
 
         if mod['name'] in mods_exception:
-            print_console(mod['name'] + ' is not supported')
+            print_console(f'{mod["name"]} is not supported')
             return False
 
         try:
             mod['version'] = re.findall(r'[\w.-]+',
                                         re.findall(r'\"version.{4}[\w.-]+', file_data)[0][::-1])[0][::-1]
         except IndexError:
-            print_console(mod['name'] + ' - no "Version" found')
+            print_console(f'{mod["name"]} - no "Version" found')
             return False
 
         try:
@@ -74,33 +70,6 @@ def reset_file(file_name):
     print_console('------------------------------------------')
     print_console('"' + file_name + '" reset')
     print_console('------------------------------------------')
-
-
-def show_mods_list(mode, mods):
-    print_console('\nMods list:\n')
-
-    i = 0
-    for mod in mods:
-        if mode == 'everything':
-            print_console(mod['name'])
-            for item in mod:
-                print_console('{0}) {1}'.format(i, mod))
-        elif mode == 'name':
-            print_console('{0}) {1}'.format(i, mod['name']))
-        elif mode == 'version':
-            print_console('{0}) {1}'.format(i, mod['version']))
-        elif mode == 'updated':
-            print_console('{0}) {1}'.format(i, mod['updated']))
-        elif mode == 'url':
-            print_console('{0}) {1}'.format(i, mod['url']))
-        elif mode == 'mc_version':
-            try:
-                print_console(str(i) + ') ' + mod['mc_version'])
-                print_console('{0}) {1}'.format(i, mod['mc_version']))
-            except KeyError:
-                print_console('{0}) {1} has no "mc_version"'.format(i, mod['name']))
-        i += 1
-    print_console('\nTotal: {0} mods'.format(len(mods)))
 
 
 def search_with_yandex(query):
@@ -133,13 +102,11 @@ def transform_files_urls(urls):
 
 def get_mod_url(mod_name, user_mc_version):
     urls = transform_files_urls(search_with_yandex('curseforge.com ' + mod_name))
-    data.progress_bar_moves += 1  # Увиличить прогресс бар на n
 
     scraper = cfscrape.create_scraper()
 
     for _ in range(0, 2):
         for url in urls:
-            data.progress_bar_moves += 1  # Увиличить прогресс бар на n
             r = scraper.get(url)
             soup = BS(r.content, 'html.parser')
             try:
@@ -182,7 +149,6 @@ def update_mod_url(mod: object, user_mc_version: object) -> object:
     if not mod['url']:
         try:
             url = get_mod_url(mod['name'], user_mc_version)
-            data.progress_bar_moves += 1  # Увиличить прогресс бар на n
 
             if url:
                 mod['url'] = url
@@ -199,14 +165,12 @@ def update_mod_url(mod: object, user_mc_version: object) -> object:
 
 
 def check_if_mod_is_updated(mod, user_mc_version):
-
     scraper = cfscrape.create_scraper()
 
     try:
         r = scraper.get(mod['url'])
     except:
         return False
-    data.progress_bar_moves += 1  # Увиличить прогресс бар на n
 
     soup = BS(r.content, 'html.parser')
 
@@ -215,7 +179,6 @@ def check_if_mod_is_updated(mod, user_mc_version):
 
     try:
         for row in mod_versions:
-            data.progress_bar_moves += 1  # Увиличить прогресс бар на n
 
             mc_version_container = row.select('.listing-container.listing-container-table:'
                                               'not(.custom-formatting) table tbody tr td')[4]
@@ -248,8 +211,6 @@ def check_if_mod_is_updated(mod, user_mc_version):
     except:
         pass
 
-    data.progress_bar_moves += 1  # Увиличить прогресс бар на n
-
     version_container = top_row.select('.listing-container.listing-container-table:'
                                        'not(.custom-formatting) table tbody tr td')[1]
 
@@ -266,7 +227,6 @@ def check_if_mod_is_updated(mod, user_mc_version):
         mod['download_link'] = False
 
         print_console('Mod is up to date')
-        data.progress_bar_moves += 1  # Увиличить прогресс бар на n
 
         return mod
 
@@ -309,10 +269,7 @@ def check_if_mod_is_updated(mod, user_mc_version):
 
             mod['new_version'] = new_version
 
-            print_console(                  'Mod can be updated ({0}) -> ({1})'.format(mod['version'], new_version)
-                )
-            print(mod)
-            data.progress_bar_moves += 1  # Увиличить прогресс бар на n
+            print_console('Mod can be updated ({0}) -> ({1})'.format(mod['version'], new_version))
 
             return mod
 
