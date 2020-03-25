@@ -7,7 +7,7 @@ import data
 from time import sleep
 import pathlib
 import subprocess
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal
 
 
 # noinspection PyAttributeOutsideInit
@@ -25,8 +25,6 @@ def save_data_py():
     text += "console_font = '{}'\n".format(data.console_font)
     text += "save_old_mods = {}\n".format(data.save_old_mods)
     text += "dark_mode = {}\n".format(data.dark_mode)
-    text += "mods = []\n"
-    text += "progress_bar_moves = 0\n"
 
     with open('data.py', 'w') as file:
         file.write(text)
@@ -43,9 +41,6 @@ def reset_data_py():
     text += "console_font = '8'\n"
     text += "save_old_mods = False\n"
     text += "dark_mode = True\n"
-    text += "dark_mode = True\n"
-    text += "mods = []\n"
-    text += "progress_bar_moves = 0\n"
 
     with open('data.py', 'w') as file:
         file.write(text)
@@ -56,13 +51,12 @@ def reset_data_py():
     data.console_font = '8'
     data.save_old_mods = False
     data.dark_mode = True
-    data.mods = []
-    data.progress_bar_moves = 0
 
     print_console('data.py reset!\n')
 
 
 class RefreshingThread(QThread):
+    set_progress_bar = pyqtSignal(int)
     mod_added = pyqtSignal(dict, str)
     set_visible: pyqtSignal = pyqtSignal(bool, bool)
 
@@ -98,16 +92,6 @@ class RefreshingThread(QThread):
             self.mainwindow.title.setText('Refreshing...')
             self.mainwindow.program_version.hide()
 
-            self.mainwindow.progress_bar.setFixedWidth(0)
-            self.mainwindow.progress_bar_widget.setFixedWidth(self.mainwindow.main_widget.width() - 60)
-
-            # Добавление спейсеров побокам
-            spacer_item = QtWidgets.QSpacerItem(0, 0,
-                                                QtWidgets.QSizePolicy.Expanding,
-                                                QtWidgets.QSizePolicy.Minimum)
-            self.mainwindow.mods_widget_horizontal_layout.addItem(spacer_item)  # Добавить спейсер справа
-            self.mainwindow.mods_widget_horizontal_layout.insertItem(0, spacer_item)  # Добавить спейсер слева
-
             self.set_visible.emit(False, True)  # Скрыть элементы
 
             self.mainwindow.mods = []
@@ -119,19 +103,21 @@ class RefreshingThread(QThread):
                 if os.path.isfile(os.path.join(data.user_mc_path, file_name)):
                     files.append(file_name)
 
-            # Запуск прогресс бара
-            self.mainwindow.mods_count = len(files)
+            # Установка масимального значения прогресс бара
+            self.set_progress_bar.emit(0)
+            self.mainwindow.progress_bar.setMaximum(len(files) * 10)
 
         for file in files:
-            data.progress_bar_moves = 0
+            self.set_progress_bar.emit(self.mainwindow.mods_done * 10)
+
             self.mod = s.get_mod_info(file)
-            data.progress_bar_moves += 3  # Увиличить прогресс бар на n
+            self.set_progress_bar.emit(self.mainwindow.progress_bar.value() + 3)
 
             # Достаточно ли информации чтобы работать с модом
             if self.mod:
                 print_console(self.mod['name'])
                 self.mod = s.update_mod_url(self.mod, self.mainwindow.mc_version_select_box.currentText())
-                data.progress_bar_moves += 3  # Увиличить прогресс бар на n
+                self.set_progress_bar.emit(self.mainwindow.progress_bar.value() + 3)
 
                 # HTTP Error 429: Too Many Requests
                 if self.mod == '429':
@@ -142,7 +128,8 @@ class RefreshingThread(QThread):
                     continue
 
                 self.mod = s.check_if_mod_is_updated(self.mod, self.mainwindow.mc_version_select_box.currentText())
-                data.progress_bar_moves += 1  # Увиличить прогресс бар на n
+                self.set_progress_bar.emit(self.mainwindow.progress_bar.value() + 3)
+
                 # Мод прошел все проверки и обработки
 
                 if self.mod:
@@ -154,7 +141,6 @@ class RefreshingThread(QThread):
         if self.after_updating:
             self.set_visible.emit(True, False)
         else:
-            self.mainwindow.mods_widget_horizontal_layout.removeItem(spacer_item)
             self.set_visible.emit(True, True)
 
         # Надпись Refreshing...
@@ -177,20 +163,16 @@ class UpdatingThread(QThread):
         self.mods = mods
 
     def run(self):
-        print(1)
         self.set_visible.emit(False, False)
 
         index = str(self.mods.index(self.mod))
-        print(1)
 
         mod = s.update_mod(mod=self.mod,
                            mods_dir=data.user_mc_path,
                            save_old_mod=self.save_old_mod)
-        print(1)
 
         self.delete_mod.emit(self.mod)
         # self.refreshing_thread.emit(mod, str(self.mods.index(mod)))
-        print(1)
 
         self.refreshing_thread.emit(mod, index)
 
@@ -390,8 +372,8 @@ class UiMainWindow(object):
         # main_widget -> stacked_widget -> mods_page -> mods_widget
 
         self.mods_widget = QtWidgets.QWidget(self.mods_page)
-        self.mods_widget.setFixedHeight(84)
-        # self.mods_widget.setMinimumSize(QtCore.QSize(0, 84))
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        self.mods_widget.setSizePolicy(size_policy)
         self.mods_widget.setObjectName("mods_widget")
 
         self.mods_widget_horizontal_layout = QtWidgets.QHBoxLayout(self.mods_widget)
@@ -423,12 +405,19 @@ class UiMainWindow(object):
         self.mc_versions = s.get_all_mc_versions()
         for mc_version in self.mc_versions:
             self.mc_version_select_box.addItem(mc_version)
-
         self.mods_widget_horizontal_layout.addWidget(self.mc_version_select_box)
 
-        self.mods_widget_horizontal_layout_spacer_item = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding,
-                                                                               QtWidgets.QSizePolicy.Minimum)
-        self.mods_widget_horizontal_layout.addItem(self.mods_widget_horizontal_layout_spacer_item)
+        self.progress_bar = QtWidgets.QProgressBar(self.mods_widget)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setObjectName("progress_bar")
+        self.progress_bar.hide()
+        self.mods_widget_horizontal_layout.addWidget(self.progress_bar)
+
+        # Добавление спейсеров побокам
+        spacer_item = QtWidgets.QSpacerItem(0, 0,
+                                            QtWidgets.QSizePolicy.Minimum,
+                                            QtWidgets.QSizePolicy.Minimum)
+        self.mods_widget_horizontal_layout.addItem(spacer_item)  # Добавить спейсер справа
 
         self.refresh_button = QtWidgets.QPushButton(self.mods_widget)
         self.refresh_button.setMinimumSize(QtCore.QSize(125, 40))
@@ -437,31 +426,6 @@ class UiMainWindow(object):
         self.refresh_button.setObjectName("refresh_button")
         self.refresh_button.clicked.connect(self.start_refresh_thread)
         self.mods_widget_horizontal_layout.addWidget(self.refresh_button)
-
-        self.progress_bar_widget = QtWidgets.QWidget(self.mods_widget)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Preferred)
-        size_policy.setHorizontalStretch(0)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.progress_bar_widget.sizePolicy().hasHeightForWidth())
-        self.progress_bar_widget.setSizePolicy(size_policy)
-        self.progress_bar_widget.setMaximumSize(QtCore.QSize(16777215, 40))
-        self.progress_bar_widget.setObjectName("progress_bar_widget")
-        self.progress_bar_widget_vertical_layout = QtWidgets.QVBoxLayout(self.progress_bar_widget)
-        self.progress_bar_widget_vertical_layout.setContentsMargins(5, 5, 5, 5)
-        self.progress_bar_widget_vertical_layout.setSpacing(0)
-        self.progress_bar_widget_vertical_layout.setObjectName("progress_bar_widget_vertical_layout")
-        self.progress_bar_widget.hide()
-
-        # main_widget -> stacked_widget -> mods_page -> mods_widget -> progress_bar_widget
-
-        self.progress_bar = QtWidgets.QWidget(self.progress_bar_widget)
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
-        self.progress_bar.setSizePolicy(size_policy)
-        self.progress_bar.setFixedWidth(0)
-        self.progress_bar.setObjectName("progress_bar")
-        self.progress_bar.setStyleSheet("background-color: rgb(255, 47, 50); border-radius: 1px;")
-        self.progress_bar_widget_vertical_layout.addWidget(self.progress_bar)
-        self.mods_widget_horizontal_layout.addWidget(self.progress_bar_widget)
 
         self.mods_page_vertical_layout.addWidget(self.mods_widget)
 
@@ -709,7 +673,7 @@ class UiMainWindow(object):
         self.update_ui()
 
     def update_ui(self):
-
+        # Обновление цвета обводки путя
         if data.user_mc_path:
             self.path_line_edit.setText(str(data.user_mc_path[:-5]))
             self.border_color = self.color_dark_grey
@@ -718,18 +682,18 @@ class UiMainWindow(object):
             self.border_color = self.color_red
 
         # Выбор цветовой темы
-        if self.dark_check_box.isChecked():
+        if self.dark_check_box.isChecked():  # Темная тема
             self.colors = ['rgb(60, 60, 60)', 'rgb(50, 50, 50)', 'rgb(37, 37, 37)', 'white', 'rgb(165, 165, 165)']
             self.line.setFrameShadow(QtWidgets.QFrame.Plain)
             self.line_2.setFrameShadow(QtWidgets.QFrame.Plain)
             self.line_3.setFrameShadow(QtWidgets.QFrame.Plain)
-        else:
+        else:  # Светлая тема
             self.colors = ['rgb(225, 225, 225)', 'rgb(235, 235, 235)', 'rgb(200, 200, 200)', 'rgb(30, 30, 30)',
                            'rgb(90, 90, 90)']
             self.line.setFrameShadow(QtWidgets.QFrame.Raised)
             self.line_2.setFrameShadow(QtWidgets.QFrame.Raised)
             self.line_3.setFrameShadow(QtWidgets.QFrame.Raised)
-        for mod in self.mods:
+        for mod in self.mods:  # Обновлние цвета
             mod['mod_slot'].setStyleSheet(
                 "border-radius: 10px;\nborder: 1px solid " + self.colors[1] + ";\nborder-radius: 7px;")
             mod['mod_slot'].children()[1].setStyleSheet("background-color: " + self.colors[1] + ";")
@@ -771,6 +735,7 @@ class UiMainWindow(object):
         self.refreshing_thread = RefreshingThread(self, mod, index)
         self.refreshing_thread.mod_added.connect(self.add_mod)
         self.refreshing_thread.set_visible.connect(self.set_visibility_while_refreshing)
+        self.refreshing_thread.set_progress_bar.connect(lambda n: self.progress_bar.setValue(n))
         self.refreshing_thread.start()
 
     def set_visibility_while_refreshing(self, visible, enable_progress_bar):
@@ -783,12 +748,7 @@ class UiMainWindow(object):
                 # Убирание прогресс бара
                 self.mods_count = 0
                 self.mods_done = 0
-                self.progress_bar_widget.hide()
-
-                self.mods_widget_horizontal_layout_spacer_item = QtWidgets.QSpacerItem(0, 0,
-                                                                                       QtWidgets.QSizePolicy.Expanding,
-                                                                                       QtWidgets.QSizePolicy.Minimum)
-                self.mods_widget_horizontal_layout.insertItem(2, self.mods_widget_horizontal_layout_spacer_item)
+                self.progress_bar.hide()
 
             self.mc_version_select_box.show()
             self.mc_version_label.show()
@@ -807,8 +767,7 @@ class UiMainWindow(object):
             self.mc_version_select_box.hide()
             self.mc_version_label.hide()
             if enable_progress_bar:
-                self.progress_bar_widget.show()
-                self.mods_widget_horizontal_layout.removeItem(self.mods_widget_horizontal_layout_spacer_item)
+                self.progress_bar.show()
             else:
                 for mod in self.mods:
                     if mod['mod_slot'].children()[4].text() == 'Update':
@@ -1018,45 +977,6 @@ class UiMainWindow(object):
             # Обновление консоли
             if self.console_text_edit.toPlainText() != data.console_text:
                 self.console_text_edit.setPlainText(data.console_text)
-
-            # Обновление прогресс бара
-
-            try:
-                if self.mods_count and self.mods_count != self.mods_done:
-                    progress_bar_max_width = self.progress_bar_widget.width() - 10
-                    main_part = progress_bar_max_width / self.mods_count * self.mods_done
-                    additional_part = progress_bar_max_width / self.mods_count * 0.05 * data.progress_bar_moves
-
-                    # Плавное обновление прогресс бара
-                    while self.progress_bar.width() < round(main_part + additional_part):
-                        self.progress_bar.setFixedWidth(self.progress_bar.width() + progress_bar_max_width / 310)
-
-                        # Плавное изменение border-radius
-                        border_radius = 0
-                        if 4 <= self.progress_bar.width() <= 6:
-                            border_radius = 2
-                        elif 6 <= self.progress_bar.width() <= 8:
-                            border_radius = 3
-                        elif 8 <= self.progress_bar.width() <= 10:
-                            border_radius = 4
-                        elif 10 <= self.progress_bar.width() <= 12:
-                            border_radius = 5
-                        elif 12 <= self.progress_bar.width() <= 14:
-                            border_radius = 6
-                        elif 14 <= self.progress_bar.width():
-                            border_radius = 7
-
-                        self.progress_bar.setStyleSheet(
-                            "background-color: rgb(255, 47, 50); border-radius: " + str(border_radius) + "px;")
-
-                        # self.progress_bar.setStyleSheet(
-                        #     "background-color: rgb(255, 47, 50); border-radius: 7px;")
-
-                        sleep(0.015)
-            except:
-                print(1)
-
-            sleep(0.1)
 
     def retranslate_ui(self, main_window):
         _translate = QtCore.QCoreApplication.translate
